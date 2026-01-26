@@ -1,6 +1,12 @@
+@echo off
+set GOOS=linux
+set GOARCH=amd64
+
+go build -o bootstrap main.go
+
+del main.zip 2>nul
+tar -a -cf main.zip bootstrap
+
 git add .
-git commit -m "Ultimo Commit"
+git commit -m "Deploy Lambda"
 git push
-go build main.go
-del main.zip
-tar.exe -a -cf main.zip main
