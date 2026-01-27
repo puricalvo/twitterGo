@@ -8,7 +8,6 @@ import (
 	"github.com/puricalvo/twitterGo/jwt"
 	"github.com/puricalvo/twitterGo/models"
 	"github.com/puricalvo/twitterGo/routers"
-
 )
 
 func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) models.RespApi {
@@ -29,6 +28,9 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 		switch ctx.Value(models.Key("path")).(string) {
 		case "registro":
 			return routers.Registro(ctx)
+		
+		case "login":
+			return routers.Login(ctx)
 		}
 		//
 	case "GET":
@@ -56,6 +58,7 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 func validoAuthorization(ctx context.Context, request events.APIGatewayProxyRequest) (bool, int, string, models.Claim) {
 	path := ctx.Value(models.Key("path")).(string)
 	if path == "registro" || path == "login" || path == "obtenerAvatar" || path == "obtenerBanner" {
+		fmt.Println("PATH RECIBIDO:", path)
 		return  true, 200, "", models.Claim{}
 	}
 

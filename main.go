@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	lambda "github.com/aws/aws-lambda-go/lambda"
@@ -12,10 +14,17 @@ import (
 	"github.com/puricalvo/twitterGo/handlers"
 	"github.com/puricalvo/twitterGo/models"
 	"github.com/puricalvo/twitterGo/secretmanager"
-
 )
 
 func main() {
+	dt := "1970-06-30T00:00:00+00:00" // Ajusta aquí
+    t, err := time.Parse("2006-01-02T15:04:05-07:00", dt)
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+    fmt.Println(t)
+	
 	lambda.Start(EjecutoLambda)
 }
 
@@ -47,7 +56,10 @@ func EjecutoLambda(ctx context.Context, request events.APIGatewayProxyRequest ) 
 		return res, nil
 	}
 
+	
+
 	path := strings.Replace(request.PathParameters["twittergo"], os.Getenv("UrlPrefix"), "", -1)
+
 
 	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("path"), path)
 	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("method"), request.HTTPMethod)
@@ -58,6 +70,8 @@ func EjecutoLambda(ctx context.Context, request events.APIGatewayProxyRequest ) 
 	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("jwtSign"), SecretModel.JWTSign)
 	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("body"), request.Body)
 	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("bucketName"), os.Getenv("BucketName"))
+
+	
 
 	// Chequeo Conexión a la Base de Datos o Conecto a la Base de Datos 
 
@@ -92,6 +106,7 @@ func EjecutoLambda(ctx context.Context, request events.APIGatewayProxyRequest ) 
 func ValidoParametros() bool {
 	_, traeParametro := os.LookupEnv("SecretName")
 	if !traeParametro {
+		fmt.Println("Database leido del secret:", bd.MongoCN)
 		return traeParametro
 	}
 	_, traeParametro = os.LookupEnv("BucketName")

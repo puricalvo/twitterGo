@@ -5,6 +5,7 @@ import (
 
 	"github.com/puricalvo/twitterGo/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+
 )
 
 func InsertoRegistro(u models.Usuario) (string, bool, error) {

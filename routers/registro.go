@@ -7,7 +7,6 @@ import (
 
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
-
 )
 
 func Registro(ctx context.Context) models.RespApi {
@@ -24,6 +23,8 @@ func Registro(ctx context.Context) models.RespApi {
 		fmt.Println(r.Message)
 		return r
 	}
+
+	
 
 	if len(t.Email) == 0 {
 		r.Message="Debe especificar el Email"
@@ -56,6 +57,8 @@ func Registro(ctx context.Context) models.RespApi {
 		fmt.Println(r.Message)
 		return  r
 	}
+
+	
 
 	r.Status=200
 	r.Message="Registro OK"
