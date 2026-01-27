@@ -8,7 +8,6 @@ import (
 	"github.com/puricalvo/twitterGo/jwt"
 	"github.com/puricalvo/twitterGo/models"
 	"github.com/puricalvo/twitterGo/routers"
-
 )
 
 func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) models.RespApi {
@@ -17,10 +16,10 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 	var r models.RespApi
 	r.Status = 400
 
-	isOk, statusCode, msg, _ := validoAuthorization(ctx, request)
+	isOk, statusCode, msg, claim := validoAuthorization(ctx, request)
 	if !isOk {
-		r.Status=statusCode
-		r.Message=msg
+		r.Status = statusCode
+		r.Message = msg
 		return r
 	}
 
@@ -42,8 +41,10 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 		//
 	case "PUT":
 		switch ctx.Value(models.Key("path")).(string) {
-			
+			case "modificarperfil":
+			return routers.ModificarPerfil(ctx, claim)
 		}
+		
 		//
 	case "DELETE":
 		switch ctx.Value(models.Key("path")).(string) {
