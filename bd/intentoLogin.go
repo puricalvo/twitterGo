@@ -3,7 +3,6 @@ package bd
 import (
 	"github.com/puricalvo/twitterGo/models"
 	"golang.org/x/crypto/bcrypt"
-
 )
 
 func IntentoLogin(email string, password string) (models.Usuario, bool) {

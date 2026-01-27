@@ -5,7 +5,6 @@ import (
 
 	"github.com/puricalvo/twitterGo/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-
 )
 
 func InsertoRegistro(u models.Usuario) (string, bool, error) {
@@ -21,6 +20,9 @@ func InsertoRegistro(u models.Usuario) (string, bool, error) {
 		return  "", false, err
 	}
 
-	ObjID, _ := result.InsertedID.(primitive.ObjectID)
-	return ObjID.String(), true, nil
+	ObjID := result.InsertedID.(primitive.ObjectID)
+	return ObjID.Hex(), true, nil
+
+	/* ObjID, _ := result.InsertedID.(primitive.ObjectID)
+	return ObjID.String(), true, nil */
 }
