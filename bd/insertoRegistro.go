@@ -20,9 +20,6 @@ func InsertoRegistro(u models.Usuario) (string, bool, error) {
 		return  "", false, err
 	}
 
-	/* ObjID := result.InsertedID.(primitive.ObjectID)
-	return ObjID.Hex(), true, nil */
-
-	 ObjID, _ := result.InsertedID.(primitive.ObjectID)
+	ObjID, _ := result.InsertedID.(primitive.ObjectID)
 	return ObjID.String(), true, nil 
 }
