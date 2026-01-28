@@ -2,12 +2,11 @@ package routers
 
 import (
 	"context"
-	"time"
 	"encoding/json"
+	"time"
 
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
-
 )
 
 func GraboTweet(ctx context.Context, claim models.Claim) models.RespApi {
@@ -40,7 +39,7 @@ func GraboTweet(ctx context.Context, claim models.Claim) models.RespApi {
 		return r
 	}
 	r.Status = 200
-	r.Message = "Tweet creado correctamente"
+	r.Message = "Tweet Creado correctamente"
 	return r
 
 }

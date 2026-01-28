@@ -8,7 +8,6 @@ import (
 	"github.com/puricalvo/twitterGo/jwt"
 	"github.com/puricalvo/twitterGo/models"
 	"github.com/puricalvo/twitterGo/routers"
-
 )
 
 func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) models.RespApi {
@@ -41,11 +40,14 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 		switch ctx.Value(models.Key("path")).(string) {
 		case "verperfil":
 			return routers.VerPerfil(request)
+
+		case "leoTweets":
+			return routers.LeoTweets(request)
 		}
 		//
 	case "PUT":
 		switch ctx.Value(models.Key("path")).(string) {
-			case "modificarperfil":
+			case "modificarPerfil":
 			return routers.ModificarPerfil(ctx, claim)
 		}
 		
