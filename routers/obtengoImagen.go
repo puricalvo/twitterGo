@@ -38,9 +38,9 @@ func ObtenerImagen(
 		var filename string
 		switch uploadType {
 		case "A":
-			filename = "avatars/"+perfil.Avatar
+			filename = perfil.Avatar
 		case "B":
-			filename = "banners/"+perfil.Banner
+			filename = perfil.Banner
 		}
 
 		fmt.Println("Filename " + filename)
