@@ -8,6 +8,7 @@ import (
 	"github.com/puricalvo/twitterGo/jwt"
 	"github.com/puricalvo/twitterGo/models"
 	"github.com/puricalvo/twitterGo/routers"
+
 )
 
 func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) models.RespApi {
@@ -49,6 +50,12 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 
 		case "leoTweets":
 			return routers.LeoTweets(request)
+
+		case "obtenerAvatar":
+			return routers.ObtenerImagen(ctx, "A", request, claim)
+
+		case "obtenerBanner":
+			return routers.ObtenerImagen(ctx, "B", request, claim)
 		}
 		//
 	case "PUT":
