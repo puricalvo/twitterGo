@@ -8,6 +8,7 @@ import (
 	"github.com/puricalvo/twitterGo/jwt"
 	"github.com/puricalvo/twitterGo/models"
 	"github.com/puricalvo/twitterGo/routers"
+
 )
 
 func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) models.RespApi {
@@ -70,7 +71,10 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 	case "DELETE":
 		switch ctx.Value(models.Key("path")).(string) {
 		case "eliminarTweet":
-			return routers.EliminarTweet(request, claim)	
+			return routers.EliminarTweet(request, claim)
+
+		case "bajaRelacion":
+			return routers.BajaRelacion(request, claim)	
 		}
 		//
 	}
