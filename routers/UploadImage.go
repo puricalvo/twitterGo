@@ -1,5 +1,4 @@
 package routers
-
 import (
 	"bytes"
 	"context"
@@ -108,6 +107,16 @@ func UploadImage(
 		}
 	}
 
+	// Solo actualizamos los campos que tengan valor
+	registro := make(map[string]interface{})
+	if len(usuario.Avatar) > 0 {
+		registro["avatar"] = usuario.Avatar
+	}
+	if len(usuario.Banner) > 0 {
+		registro["banner"] = usuario.Banner
+	}
+
+	// Llamada a bd.ModificoRegistro con el struct parcial
 	status, err := bd.ModificoRegistro(usuario, IDUsuario)
 	if err != nil || !status {
 		r.Status = 400
