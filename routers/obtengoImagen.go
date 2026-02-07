@@ -13,6 +13,7 @@ import (
 	"github.com/puricalvo/twitterGo/awsgo"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
+
 )
 
 // Función de headers CORS
@@ -58,6 +59,19 @@ func ObtenerImagen(
 	case "B":
 		filename = perfil.Banner
 	}
+
+	if filename == "" {
+	r.Status = 404
+	r.Message = "El usuario no tiene imagen"
+	r.CustomResp = &events.APIGatewayProxyResponse{
+		StatusCode: 404,
+		Headers: map[string]string{
+			"Access-Control-Allow-Origin":      "http://localhost:3000",
+			"Access-Control-Allow-Credentials": "true",
+		},
+	}
+	return r
+}
 
 	var encoded string
 
