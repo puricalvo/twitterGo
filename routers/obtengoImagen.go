@@ -13,13 +13,15 @@ import (
 	"github.com/puricalvo/twitterGo/awsgo"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
+
 )
 
 func ObtenerImagen(
 	ctx context.Context,
 	uploadType string,
 	request events.APIGatewayProxyRequest,
-	claim models.Claim) models.RespApi {
+	claim models.Claim,
+) models.RespApi {
 
 	var r models.RespApi
 	r.Status = 400
@@ -55,16 +57,16 @@ func ObtenerImagen(
 		return r
 	}
 
-	// 🔑 CONVERTIR A BASE64
+	// 🔑 Convertir los bytes a Base64 para que el navegador lo interprete correctamente
 	encoded := base64.StdEncoding.EncodeToString(file.Bytes())
 
 	r.CustomResp = &events.APIGatewayProxyResponse{
-		StatusCode:        200,
-		Body:              encoded,
-		IsBase64Encoded:   true, // 🔥 IMPRESCINDIBLE
+		StatusCode:      200,
+		Body:            encoded,
+		IsBase64Encoded: true, // 🔥 esto le indica a API Gateway que el body es binario
 		Headers: map[string]string{
-			"Content-Type":                 "image/jpeg", // 👈 CLAVE
-			"Access-Control-Allow-Origin":  "http://localhost:3000",
+			"Content-Type":                    "image/jpeg",
+			"Access-Control-Allow-Origin":     "http://localhost:3000",
 			"Access-Control-Allow-Credentials": "true",
 		},
 	}
