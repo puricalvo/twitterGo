@@ -3,6 +3,7 @@ package routers
 import (
 	"bytes"
 	"context"
+	"encoding/base64" // 👈 AÑADIR
 	"fmt"
 	"io"
 
@@ -20,49 +21,57 @@ func ObtenerImagen(
 	request events.APIGatewayProxyRequest,
 	claim models.Claim) models.RespApi {
 
-		var r models.RespApi
-		r.Status = 400
+	var r models.RespApi
+	r.Status = 400
 
-		ID := request.QueryStringParameters["id"]
-		if len(ID) < 1 {
-			r.Message = "El parámetro del ID es obligatorio"
-			return r
-		}
-
-		perfil, err := bd.BuscoPerfil(ID)
-		if err != nil {
-			r.Message = "Usuario no encontrado "+err.Error()
-			return r
-		}
-
-		var filename string
-		switch uploadType {
-		case "A":
-			filename = perfil.Avatar
-		case "B":
-			filename = perfil.Banner
-		}
-
-		fmt.Println("Filename " + filename)
-		svc := s3.NewFromConfig(awsgo.Cfg)
-
-		file, err := downloadFromS3(ctx, svc, filename)
-		if err != nil {
-			r.Status = 500
-			r.Message="Error descargando archivo de S3 "+err.Error()
-			return r
-		}
-
-		r.CustomResp = &events.APIGatewayProxyResponse{
-			StatusCode: 200,
-			Body: file.String(),
-			Headers: map[string]string {
-				"Content-Type": "application/octet-stream",
-				"Content-Disposition": fmt.Sprintf("attachment; filename=\"%s\"", filename),
-			},
-		}
+	ID := request.QueryStringParameters["id"]
+	if len(ID) < 1 {
+		r.Message = "El parámetro del ID es obligatorio"
 		return r
 	}
+
+	perfil, err := bd.BuscoPerfil(ID)
+	if err != nil {
+		r.Message = "Usuario no encontrado " + err.Error()
+		return r
+	}
+
+	var filename string
+	switch uploadType {
+	case "A":
+		filename = perfil.Avatar
+	case "B":
+		filename = perfil.Banner
+	}
+
+	fmt.Println("Filename " + filename)
+
+	svc := s3.NewFromConfig(awsgo.Cfg)
+
+	file, err := downloadFromS3(ctx, svc, filename)
+	if err != nil {
+		r.Status = 500
+		r.Message = "Error descargando archivo de S3 " + err.Error()
+		return r
+	}
+
+	// 🔑 CONVERTIR A BASE64
+	encoded := base64.StdEncoding.EncodeToString(file.Bytes())
+
+	r.CustomResp = &events.APIGatewayProxyResponse{
+		StatusCode:        200,
+		Body:              encoded,
+		IsBase64Encoded:   true, // 🔥 IMPRESCINDIBLE
+		Headers: map[string]string{
+			"Content-Type":                 "image/jpeg", // 👈 CLAVE
+			"Access-Control-Allow-Origin":  "http://localhost:3000",
+			"Access-Control-Allow-Credentials": "true",
+		},
+	}
+
+	return r
+}
+
 
 	func downloadFromS3(ctx context.Context, svc *s3.Client, filename string) (*bytes.Buffer, error) {
 		bucket := ctx.Value(models.Key("bucketName")).(string)
