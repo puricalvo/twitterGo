@@ -3,12 +3,12 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/puricalvo/twitterGo/jwt"
 	"github.com/puricalvo/twitterGo/models"
 	"github.com/puricalvo/twitterGo/routers"
-
 )
 
 func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) models.RespApi {
@@ -24,9 +24,16 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 		return r
 	}
 
+	// 🔹 AQUÍ MISMO
+	path := strings.ReplaceAll(
+		ctx.Value(models.Key("path")).(string),
+		"/",
+		"",
+	)
+
 	switch ctx.Value(models.Key("method")).(string) {
 	case "POST":
-		switch ctx.Value(models.Key("path")).(string) {
+		switch path {
 		case "registro":
 			return routers.Registro(ctx)
 		
@@ -47,7 +54,7 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 		}
 		//
 	case "GET":
-		switch ctx.Value(models.Key("path")).(string) {
+		switch path {
 		case "verperfil":
 			return routers.VerPerfil(request)
 
@@ -71,14 +78,14 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 		}
 		//
 	case "PUT":
-		switch ctx.Value(models.Key("path")).(string) {
+		switch path {
 		case "modificarPerfil":
 			return routers.ModificarPerfil(ctx, claim)
 		}
 		
 		//
 	case "DELETE":
-		switch ctx.Value(models.Key("path")).(string) {
+		switch path {
 		case "eliminarTweet":
 			return routers.EliminarTweet(request, claim)
 
@@ -95,7 +102,7 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 
 func validoAuthorization(ctx context.Context, request events.APIGatewayProxyRequest) (bool, int, string, models.Claim) {
 	path := ctx.Value(models.Key("path")).(string)
-	if path == "registro" || path == "login" || path == "obtenerAvatar" || path == "obtenerBanner" || path == "subirAvatar" || path == "subirBanner"{
+	if path == "registro" || path == "login" || path == "obtenerAvatar" || path == "obtenerBanner" {
 		fmt.Println("PATH RECIBIDO:", path)
 		return  true, 200, "", models.Claim{}
 	}
