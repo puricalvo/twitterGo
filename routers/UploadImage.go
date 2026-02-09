@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -58,6 +59,10 @@ func UploadImage(
 		r.Message = "Debe enviar una imagen con Content-Type multipart/"
 		return r
 	}
+
+	fmt.Println("IsBase64Encoded:", request.IsBase64Encoded)
+	fmt.Println("Content-Type:", request.Headers["Content-Type"])
+	fmt.Println("Body length:", len(request.Body))
 
 	var body []byte
 
