@@ -6,4 +6,5 @@ type RespApi struct {
 	Status int
 	Message string
 	CustomResp *events.APIGatewayProxyResponse
+
 }

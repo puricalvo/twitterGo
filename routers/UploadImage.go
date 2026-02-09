@@ -48,6 +48,10 @@ func UploadImage(
 	}
 
 	mediaType, params, err := mime.ParseMediaType(request.Headers["Content-Type"])
+	fmt.Println("Headers:", request.Headers)
+	fmt.Println("IsBase64Encoded:", request.IsBase64Encoded)
+	fmt.Println("Body length:", len(request.Body))
+
 	if err != nil {
 		r.Status = 500
 		r.Message = err.Error()
@@ -60,25 +64,24 @@ func UploadImage(
 		return r
 	}
 
-	fmt.Println("IsBase64Encoded:", request.IsBase64Encoded)
-	fmt.Println("Content-Type:", request.Headers["Content-Type"])
-	fmt.Println("Body length:", len(request.Body))
+	
 
-	var body []byte
+
+	/* var body []byte
 
 	if request.IsBase64Encoded {
 		body, err = base64.StdEncoding.DecodeString(request.Body)
 	} else {
 		body = []byte(request.Body)
-	}
+	} */
 
-	/* // API Gateway envía el body en base64
+	 // API Gateway envía el body en base64
 	body, err := base64.StdEncoding.DecodeString(request.Body)
 	if err != nil {
 		r.Status = 500
 		r.Message = err.Error()
 		return r
-	} */
+	} 
 
 	mr := multipart.NewReader(bytes.NewReader(body), params["boundary"])
 	p, err := mr.NextPart()
@@ -119,6 +122,8 @@ func UploadImage(
 			r.Message = err.Error()
 			return r
 		}
+
+		
 	}
 
 	// Solo actualizamos los campos que tengan valor
