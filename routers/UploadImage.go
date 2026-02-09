@@ -59,24 +59,20 @@ func UploadImage(
 		return r
 	}
 
-	
-
-
-	/* var body []byte
+	 // API Gateway envía el body en base64
+	var body []byte
 
 	if request.IsBase64Encoded {
-		body, err = base64.StdEncoding.DecodeString(request.Body)
-	} else {
-		body = []byte(request.Body)
-	} */
-
-	 // API Gateway envía el body en base64
-	body, err := base64.StdEncoding.DecodeString(request.Body)
-	if err != nil {
-		r.Status = 500
-		r.Message = err.Error()
-		return r
-	} 
+		decoded, err := base64.StdEncoding.DecodeString(request.Body)
+		if err != nil {
+			r.Status = 500
+			r.Message = err.Error()
+			return r
+    }
+    body = decoded
+} else {
+    body = []byte(request.Body)
+}
 
 	mr := multipart.NewReader(bytes.NewReader(body), params["boundary"])
 	p, err := mr.NextPart()
