@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -45,11 +46,14 @@ func UploadImage(
 		usuario.Banner = filename
 	}
 
-	mediaType, params, err := mime.ParseMediaType(request.Headers["Content-Type"])
+	contentType := request.Headers["content-type"]
+
+	mediaType, params, err := mime.ParseMediaType(contentType)
 	
 	if err != nil {
+		fmt.Println("CONTENT-TYPE:", contentType)
 		r.Status = 500
-		r.Message = err.Error()
+		r.Message = "Content-Type inválido"
 		return r
 	}
 
@@ -65,14 +69,15 @@ func UploadImage(
 	if request.IsBase64Encoded {
 		decoded, err := base64.StdEncoding.DecodeString(request.Body)
 		if err != nil {
+			fmt.Println("BASE64:", request.IsBase64Encoded)
 			r.Status = 500
 			r.Message = err.Error()
 			return r
     }
     body = decoded
-} else {
-    body = []byte(request.Body)
-}
+	} else {
+		body = []byte(request.Body)
+	}
 
 	mr := multipart.NewReader(bytes.NewReader(body), params["boundary"])
 	p, err := mr.NextPart()
