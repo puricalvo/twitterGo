@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/puricalvo/twitterGo/models"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func BorroRelacion(t models.Relacion) (bool, error) {
@@ -12,10 +13,15 @@ func BorroRelacion(t models.Relacion) (bool, error) {
 	db := MongoCN.Database(DatabaseName)
 	col := db.Collection("relacion")
 
-	_, err := col.DeleteOne(ctx, t)
+	filtro := bson.M{
+		"usuarioid":         t.UsuarioID,
+		"usuariorelacionid": t.UsuarioRelacionID,
+	}
+
+	_, err := col.DeleteMany(ctx, filtro)
 	if err != nil {
 		return false, err
 	}
 
-	return  true, nil
+	return true, nil
 }
