@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
-	"fmt"
 	"io"
 	"mime"
-	"mime/multipart"
-	"net/http" // 🔥 AÑADIDO
+	"mime/multipart" // 🔥 AÑADIDO
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -20,41 +18,41 @@ import (
 	"github.com/puricalvo/twitterGo/models"
 )
 
-func UploadImage(
-	ctx context.Context,
-	uploadType string,
-	request events.APIGatewayProxyRequest,
-	claim models.Claim,
-) models.RespApi {
+type readSeeker struct {
+	io.Reader
+}
+
+func (rs *readSeeker) Seek(offset int64, whence int) (int64, error) {
+	return 0, nil
+}
+
+func UploadImage(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
 
 	var r models.RespApi
 	r.Status = 400
-
 	IDUsuario := claim.ID.Hex()
 
 	var filename string
 	var usuario models.Usuario
 
-	// bucket desde context
 	bucket := ctx.Value(models.Key("bucketName")).(string)
 
 	switch uploadType {
 	case "A":
-		filename = "avatars/" + IDUsuario
+		filename = "avatars/" + IDUsuario 
 		usuario.Avatar = filename
 	case "B":
-		filename = "banners/" + IDUsuario
+		filename = "banners/" + IDUsuario 
 		usuario.Banner = filename
 	}
 
 	contentType := request.Headers["content-type"]
 
 	mediaType, params, err := mime.ParseMediaType(contentType)
-
+	
 	if err != nil {
-		fmt.Println("CONTENT-TYPE:", contentType)
 		r.Status = 500
-		r.Message = "Content-Type inválido"
+		r.Message = err.Error()
 		return r
 	}
 
@@ -64,29 +62,28 @@ func UploadImage(
 		return r
 	}
 
-	// API Gateway envía el body en base64
+	 // API Gateway envía el body en base64
 	var body []byte
 
 	if request.IsBase64Encoded {
 		decoded, err := base64.StdEncoding.DecodeString(request.Body)
 		if err != nil {
-			fmt.Println("BASE64:", request.IsBase64Encoded)
 			r.Status = 500
 			r.Message = err.Error()
 			return r
-		}
-		body = decoded
+    }
+    body = decoded
 	} else {
 		body = []byte(request.Body)
 	}
 
-	mr := multipart.NewReader(bytes.NewReader(body), params["boundary"])
-	p, err := mr.NextPart()
-	if err != nil && err != io.EOF {
-		r.Status = 500
-		r.Message = err.Error()
-		return r
-	}
+		mr := multipart.NewReader(bytes.NewReader(body), params["boundary"])
+		p, err := mr.NextPart()
+		if err != nil && err != io.EOF {
+			r.Status = 500
+			r.Message = err.Error()
+			return r
+		}
 
 	if p.FileName() != "" {
 
@@ -97,26 +94,21 @@ func UploadImage(
 			return r
 		}
 
-		// 🔥 Detectar automáticamente el tipo MIME real
-		fileBytes := buf.Bytes()
-		mimeType := http.DetectContentType(fileBytes)
+			// Configuración AWS v2
+			cfg, err := config.LoadDefaultConfig(ctx)
+			if err != nil {
+				r.Status = 500
+				r.Message = "Error al cargar configuración de AWS: " + err.Error()
+				return r
+			}
 
-		// 🔹 AWS SDK v2 (Lambda)
-		cfg, err := config.LoadDefaultConfig(ctx)
-		if err != nil {
-			r.Status = 500
-			r.Message = err.Error()
-			return r
-		}
-
-		client := s3.NewFromConfig(cfg)
-		uploader := manager.NewUploader(client)
+			client := s3.NewFromConfig(cfg)
+			uploader := manager.NewUploader(client)
 
 		_, err = uploader.Upload(ctx, &s3.PutObjectInput{
-			Bucket:      aws.String(bucket),
-			Key:         aws.String(filename),
-			Body:        bytes.NewReader(fileBytes),
-			ContentType: aws.String(mimeType), // 🔥 AQUI ESTA LA CLAVE
+			Bucket: aws.String(bucket),
+			Key:    aws.String(filename),
+			Body:   buf,
 		})
 
 		if err != nil {
@@ -124,6 +116,8 @@ func UploadImage(
 			r.Message = err.Error()
 			return r
 		}
+
+		
 	}
 
 	// Solo actualizamos los campos que tengan valor
@@ -139,11 +133,10 @@ func UploadImage(
 	status, err := bd.ModificoRegistro(usuario, IDUsuario)
 	if err != nil || !status {
 		r.Status = 400
-		r.Message = "Error al modificar registro del usuario " + err.Error()
 		return r
 	}
 
 	r.Status = 200
-	r.Message = "Image Upload OK!"
+	r.Message = "Image Upload OK !"
 	return r
 }
