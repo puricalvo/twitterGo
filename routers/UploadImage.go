@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime"
 	"mime/multipart"
+	"net/http" // 🔥 AÑADIDO
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -39,17 +40,17 @@ func UploadImage(
 
 	switch uploadType {
 	case "A":
-		filename = "avatars/" + IDUsuario 
+		filename = "avatars/" + IDUsuario
 		usuario.Avatar = filename
 	case "B":
-		filename = "banners/" + IDUsuario 
+		filename = "banners/" + IDUsuario
 		usuario.Banner = filename
 	}
 
 	contentType := request.Headers["content-type"]
 
 	mediaType, params, err := mime.ParseMediaType(contentType)
-	
+
 	if err != nil {
 		fmt.Println("CONTENT-TYPE:", contentType)
 		r.Status = 500
@@ -63,7 +64,7 @@ func UploadImage(
 		return r
 	}
 
-	 // API Gateway envía el body en base64
+	// API Gateway envía el body en base64
 	var body []byte
 
 	if request.IsBase64Encoded {
@@ -73,8 +74,8 @@ func UploadImage(
 			r.Status = 500
 			r.Message = err.Error()
 			return r
-    }
-    body = decoded
+		}
+		body = decoded
 	} else {
 		body = []byte(request.Body)
 	}
@@ -96,6 +97,10 @@ func UploadImage(
 			return r
 		}
 
+		// 🔥 Detectar automáticamente el tipo MIME real
+		fileBytes := buf.Bytes()
+		mimeType := http.DetectContentType(fileBytes)
+
 		// 🔹 AWS SDK v2 (Lambda)
 		cfg, err := config.LoadDefaultConfig(ctx)
 		if err != nil {
@@ -108,9 +113,10 @@ func UploadImage(
 		uploader := manager.NewUploader(client)
 
 		_, err = uploader.Upload(ctx, &s3.PutObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(filename),
-			Body:   buf,
+			Bucket:      aws.String(bucket),
+			Key:         aws.String(filename),
+			Body:        bytes.NewReader(fileBytes),
+			ContentType: aws.String(mimeType), // 🔥 AQUI ESTA LA CLAVE
 		})
 
 		if err != nil {
@@ -118,8 +124,6 @@ func UploadImage(
 			r.Message = err.Error()
 			return r
 		}
-
-		
 	}
 
 	// Solo actualizamos los campos que tengan valor
