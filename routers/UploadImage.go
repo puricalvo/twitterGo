@@ -40,12 +40,38 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 		usuario.Banner = filename
 	}
 
+	// ==========================
+	// OBTENER CONTENT-TYPE SEGURO
+	// ==========================
+
 	contentType := request.Headers["Content-Type"]
+
+	if contentType == "" {
+		contentType = request.Headers["content-type"]
+	}
+
+	if contentType == "" && request.MultiValueHeaders != nil {
+		if values, ok := request.MultiValueHeaders["Content-Type"]; ok && len(values) > 0 {
+			contentType = values[0]
+		}
+	}
+
+	if contentType == "" && request.MultiValueHeaders != nil {
+		if values, ok := request.MultiValueHeaders["content-type"]; ok && len(values) > 0 {
+			contentType = values[0]
+		}
+	}
+
+	if contentType == "" {
+		r.Status = 400
+		r.Message = "Content-Type no recibido"
+		return r
+	}
 
 	mediaType, params, err := mime.ParseMediaType(contentType)
 	if err != nil {
 		r.Status = 500
-		r.Message = err.Error()
+		r.Message = "Error parseando Content-Type: " + err.Error()
 		return r
 	}
 
@@ -55,13 +81,17 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 		return r
 	}
 
-	// Decodificar body si viene en base64
+	// ==========================
+	// DECODIFICAR BODY
+	// ==========================
+
 	var body []byte
+
 	if request.IsBase64Encoded {
 		decoded, err := base64.StdEncoding.DecodeString(request.Body)
 		if err != nil {
 			r.Status = 500
-			r.Message = err.Error()
+			r.Message = "Error decodificando base64: " + err.Error()
 			return r
 		}
 		body = decoded
@@ -69,7 +99,18 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 		body = []byte(request.Body)
 	}
 
-	mr := multipart.NewReader(bytes.NewReader(body), params["boundary"])
+	// ==========================
+	// LEER MULTIPART
+	// ==========================
+
+	boundary, ok := params["boundary"]
+	if !ok {
+		r.Status = 400
+		r.Message = "Boundary no encontrado en Content-Type"
+		return r
+	}
+
+	mr := multipart.NewReader(bytes.NewReader(body), boundary)
 
 	var fileUploaded bool
 
@@ -111,10 +152,11 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 		uploader := manager.NewUploader(client)
 
 		_, err = uploader.Upload(ctx, &s3.PutObjectInput{
-			Bucket:      aws.String(bucket),
-			Key:         aws.String(filename),
-			Body:        bytes.NewReader(fileBytes),
-			ContentType: aws.String(detectedContentType),
+			Bucket:       aws.String(bucket),
+			Key:          aws.String(filename),
+			Body:         bytes.NewReader(fileBytes),
+			ContentType:  aws.String(detectedContentType),
+			CacheControl: aws.String("no-cache"),
 		})
 
 		if err != nil {
@@ -133,10 +175,14 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 		return r
 	}
 
-	// Actualizar base de datos
+	// ==========================
+	// ACTUALIZAR BASE DE DATOS
+	// ==========================
+
 	status, err := bd.ModificoRegistro(usuario, IDUsuario)
 	if err != nil || !status {
 		r.Status = 400
+		r.Message = "Error actualizando base de datos"
 		return r
 	}
 
