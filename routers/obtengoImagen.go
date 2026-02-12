@@ -13,18 +13,10 @@ import (
 	"github.com/puricalvo/twitterGo/awsgo"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
+
 )
 
-// Función de headers CORS
-func corsHeaders() map[string]string {
-	return map[string]string{
-		"Content-Type":                     "image/jpeg",
-		"Access-Control-Allow-Origin":      "http://localhost:3000",
-		"Access-Control-Allow-Credentials": "true",
-		"Access-Control-Allow-Headers":     "Content-Type,Authorization",
-		"Access-Control-Allow-Methods":     "GET,POST,PUT,DELETE,OPTIONS",
-	}
-}
+
 
 // Avatar por defecto en base64 (importado o generado)
 var AvatarNoFoundBase64 string // 🔹 Aquí deberías poner tu base64 pre-generado o leerlo desde S3/local
@@ -60,8 +52,9 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
 	r.CustomResp = &events.APIGatewayProxyResponse{
 		StatusCode: 404,
 		Headers: map[string]string{
-			"Access-Control-Allow-Origin":      "http://localhost:3000",
-			"Access-Control-Allow-Credentials": "true",
+			"Access-Control-Allow-Origin":  "*",
+		"Access-Control-Allow-Headers": "*",
+		"Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
 		},
 	}
 	return r
@@ -88,7 +81,11 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
 		StatusCode:      200,
 		Body:            encoded,
 		IsBase64Encoded: true,
-		Headers:         corsHeaders(),
+		Headers: map[string]string{
+			"Access-Control-Allow-Origin":  "*",
+		"Access-Control-Allow-Headers": "*",
+		"Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+		},
 	}
 
 	r.Status = 200

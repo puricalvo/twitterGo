@@ -14,7 +14,6 @@ import (
 	"github.com/puricalvo/twitterGo/handlers"
 	"github.com/puricalvo/twitterGo/models"
 	"github.com/puricalvo/twitterGo/secretmanager"
-
 )
 
 func main() {
@@ -128,10 +127,8 @@ func ValidoParametros() bool {
 // ===== Función de headers CORS =====
 func corsHeaders() map[string]string {
 	return map[string]string{
-		"Content-Type":                     "application/json",
-		"Access-Control-Allow-Origin":      "http://localhost:3000",
-		"Access-Control-Allow-Credentials": "true",
-		"Access-Control-Allow-Headers":     "Content-Type,Authorization",
-		"Access-Control-Allow-Methods":     "GET,POST,PUT,DELETE,OPTIONS",
+		"Access-Control-Allow-Origin":  "*",
+		"Access-Control-Allow-Headers": "*",
+		"Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
 	}
 }
