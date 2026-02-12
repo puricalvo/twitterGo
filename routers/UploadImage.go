@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
+
 )
 
 func UploadImage(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
@@ -69,14 +70,23 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 	}
 
 	mr := multipart.NewReader(bytes.NewReader(body), params["boundary"])
-	p, err := mr.NextPart()
-	if err != nil && err != io.EOF {
-		r.Status = 500
-		r.Message = err.Error()
-		return r
-	}
 
-	if p.FileName() != "" {
+	var fileUploaded bool
+
+	for {
+		p, err := mr.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			r.Status = 500
+			r.Message = err.Error()
+			return r
+		}
+
+		if p.FileName() == "" {
+			continue
+		}
 
 		buf := bytes.NewBuffer(nil)
 		if _, err := io.Copy(buf, p); err != nil {
@@ -112,6 +122,15 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 			r.Message = err.Error()
 			return r
 		}
+
+		fileUploaded = true
+		break
+	}
+
+	if !fileUploaded {
+		r.Status = 400
+		r.Message = "No se encontró archivo en el form-data"
+		return r
 	}
 
 	// Actualizar base de datos
