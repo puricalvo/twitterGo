@@ -17,7 +17,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
-
 )
 
 func UploadImage(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
@@ -40,7 +39,7 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 		usuario.Banner = filename
 	}
 
-	contentType := request.Headers["content-type"]
+	contentType := request.Headers["Content-Type"]
 
 	mediaType, params, err := mime.ParseMediaType(contentType)
 	if err != nil {
