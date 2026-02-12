@@ -6,7 +6,8 @@ import (
 	"encoding/base64"
 	"io"
 	"mime"
-	"mime/multipart" // 🔥 AÑADIDO
+	"mime/multipart"
+	"net/http"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -16,15 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
+
 )
-
-type readSeeker struct {
-	io.Reader
-}
-
-func (rs *readSeeker) Seek(offset int64, whence int) (int64, error) {
-	return 0, nil
-}
 
 func UploadImage(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
 
@@ -39,17 +33,16 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 
 	switch uploadType {
 	case "A":
-		filename = "avatars/" + IDUsuario 
+		filename = "avatars/" + IDUsuario
 		usuario.Avatar = filename
 	case "B":
-		filename = "banners/" + IDUsuario 
+		filename = "banners/" + IDUsuario
 		usuario.Banner = filename
 	}
 
 	contentType := request.Headers["content-type"]
 
 	mediaType, params, err := mime.ParseMediaType(contentType)
-	
 	if err != nil {
 		r.Status = 500
 		r.Message = err.Error()
@@ -62,28 +55,27 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 		return r
 	}
 
-	 // API Gateway envía el body en base64
+	// Decodificar body si viene en base64
 	var body []byte
-
 	if request.IsBase64Encoded {
 		decoded, err := base64.StdEncoding.DecodeString(request.Body)
 		if err != nil {
 			r.Status = 500
 			r.Message = err.Error()
 			return r
-    }
-    body = decoded
+		}
+		body = decoded
 	} else {
 		body = []byte(request.Body)
 	}
 
-		mr := multipart.NewReader(bytes.NewReader(body), params["boundary"])
-		p, err := mr.NextPart()
-		if err != nil && err != io.EOF {
-			r.Status = 500
-			r.Message = err.Error()
-			return r
-		}
+	mr := multipart.NewReader(bytes.NewReader(body), params["boundary"])
+	p, err := mr.NextPart()
+	if err != nil && err != io.EOF {
+		r.Status = 500
+		r.Message = err.Error()
+		return r
+	}
 
 	if p.FileName() != "" {
 
@@ -94,21 +86,26 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 			return r
 		}
 
-			// Configuración AWS v2
-			cfg, err := config.LoadDefaultConfig(ctx)
-			if err != nil {
-				r.Status = 500
-				r.Message = "Error al cargar configuración de AWS: " + err.Error()
-				return r
-			}
+		fileBytes := buf.Bytes()
 
-			client := s3.NewFromConfig(cfg)
-			uploader := manager.NewUploader(client)
+		// Detectar tipo MIME automáticamente
+		detectedContentType := http.DetectContentType(fileBytes)
+
+		cfg, err := config.LoadDefaultConfig(ctx)
+		if err != nil {
+			r.Status = 500
+			r.Message = "Error al cargar configuración de AWS: " + err.Error()
+			return r
+		}
+
+		client := s3.NewFromConfig(cfg)
+		uploader := manager.NewUploader(client)
 
 		_, err = uploader.Upload(ctx, &s3.PutObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(filename),
-			Body:   buf,
+			Bucket:      aws.String(bucket),
+			Key:         aws.String(filename),
+			Body:        bytes.NewReader(fileBytes),
+			ContentType: aws.String(detectedContentType),
 		})
 
 		if err != nil {
@@ -116,20 +113,9 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 			r.Message = err.Error()
 			return r
 		}
-
-		
 	}
 
-	// Solo actualizamos los campos que tengan valor
-	registro := make(map[string]interface{})
-	if len(usuario.Avatar) > 0 {
-		registro["avatar"] = usuario.Avatar
-	}
-	if len(usuario.Banner) > 0 {
-		registro["banner"] = usuario.Banner
-	}
-
-	// Llamada a bd.ModificoRegistro con el struct parcial
+	// Actualizar base de datos
 	status, err := bd.ModificoRegistro(usuario, IDUsuario)
 	if err != nil || !status {
 		r.Status = 400
@@ -137,6 +123,6 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 	}
 
 	r.Status = 200
-	r.Message = "Image Upload OK !"
+	r.Message = "Image Upload OK!"
 	return r
 }
