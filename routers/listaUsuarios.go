@@ -1,8 +1,10 @@
 package routers
 
 import (
+	"context"
 	"encoding/json"
 	"strconv"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/puricalvo/twitterGo/bd"
@@ -28,7 +30,12 @@ func ListaUsuarios(request events.APIGatewayProxyRequest, claim models.Claim) mo
 		return r
 	}
 
-	usuarios, status := bd.LeoUsuariosTodos(IDUsuario, int64(pagTemp), search, typeUser)
+	// 🔹 Creamos contexto con timeout por request
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// 🔹 Pasamos el contexto a la función BD
+	usuarios, status := bd.LeoUsuariosTodosConContext(ctxTimeout, IDUsuario, int64(pagTemp), search, typeUser)
 	if !status {
 		// 🔹 Si hay error en bd, devolvemos array vacío en vez de romper
 		usuarios = []*models.Usuario{}
