@@ -14,10 +14,7 @@ import (
 	"github.com/puricalvo/twitterGo/handlers"
 	"github.com/puricalvo/twitterGo/models"
 	"github.com/puricalvo/twitterGo/secretmanager"
-
 )
-
-var err error
 
 // 🔥 INIT: se ejecuta UNA sola vez por contenedor
 func init() {
