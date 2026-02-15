@@ -14,10 +14,41 @@ import (
 	"github.com/puricalvo/twitterGo/handlers"
 	"github.com/puricalvo/twitterGo/models"
 	"github.com/puricalvo/twitterGo/secretmanager"
+
 )
 
+var err error
+
+// 🔥 INIT: se ejecuta UNA sola vez por contenedor
+func init() {
+
+	if !ValidoParametros() {
+		panic("Error en las variables de entorno")
+	}
+
+	awsgo.InicializoAWS()
+
+	SecretModel, err := secretmanager.GetSecret(os.Getenv("SecretName"))
+	if err != nil {
+		panic("Error en la lectura de Secret: " + err.Error())
+	}
+
+	awsgo.Ctx = context.WithValue(context.Background(), models.Key("user"), SecretModel.Username)
+	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("password"), SecretModel.Password)
+	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("host"), SecretModel.Host)
+	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("database"), SecretModel.Database)
+	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("jwtSign"), SecretModel.JWTSign)
+	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("bucketName"), os.Getenv("BucketName"))
+
+	// 🔥 Conexión BD una sola vez
+	err = bd.ConectarBD(awsgo.Ctx)
+	if err != nil {
+		panic("Error conectando la BD: " + err.Error())
+	}
+}
+
 func main() {
-	dt := "1970-06-30T00:00:00+00:00" // Ajusta aquí
+	dt := "1970-06-30T00:00:00+00:00"
 	t, err := time.Parse("2006-01-02T15:04:05-07:00", dt)
 	if err != nil {
 		fmt.Println(err)
@@ -29,9 +60,8 @@ func main() {
 }
 
 func EjecutoLambda(ctx context.Context, request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
-	var res *events.APIGatewayProxyResponse
 
-	awsgo.InicializoAWS()
+	var res *events.APIGatewayProxyResponse
 
 	// ===== CORS: manejar OPTIONS (preflight) =====
 	if request.HTTPMethod == "OPTIONS" {
@@ -43,47 +73,12 @@ func EjecutoLambda(ctx context.Context, request events.APIGatewayProxyRequest) (
 	}
 	// =============================================
 
-	if !ValidoParametros() {
-		res = &events.APIGatewayProxyResponse{
-			StatusCode: 400,
-			Body:       "Error en las variables de entorno, debe de incluir 'SecretName', 'BucketName', 'UrlPrefix' ",
-			Headers:    corsHeaders(),
-		}
-		return res, nil
-	}
-
-	SecretModel, err := secretmanager.GetSecret(os.Getenv("SecretName"))
-	if err != nil {
-		res = &events.APIGatewayProxyResponse{
-			StatusCode: 400,
-			Body:       "Error en la lectura de Secret " + err.Error(),
-			Headers:    corsHeaders(),
-		}
-		return res, nil
-	}
-
 	path := strings.Replace(request.PathParameters["twittergo"], os.Getenv("UrlPrefix"), "", -1)
 
+	// 🔥 Solo añadimos datos específicos del request
 	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("path"), path)
 	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("method"), request.HTTPMethod)
-	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("user"), SecretModel.Username)
-	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("password"), SecretModel.Password)
-	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("host"), SecretModel.Host)
-	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("database"), SecretModel.Database)
-	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("jwtSign"), SecretModel.JWTSign)
 	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("body"), request.Body)
-	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("bucketName"), os.Getenv("BucketName"))
-
-	// Chequeo Conexión a la Base de Datos o Conecto a la Base de Datos
-	err = bd.ConectarBD(awsgo.Ctx)
-	if err != nil {
-		res = &events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Body:       "Error conectando la BD " + err.Error(),
-			Headers:    corsHeaders(),
-		}
-		return res, nil
-	}
 
 	respAPI := handlers.Manejadores(awsgo.Ctx, request)
 
@@ -95,7 +90,6 @@ func EjecutoLambda(ctx context.Context, request events.APIGatewayProxyRequest) (
 		}
 		return res, nil
 	} else {
-		// ===== Aseguramos CORS en CustomResp =====
 		if respAPI.CustomResp.Headers == nil {
 			respAPI.CustomResp.Headers = map[string]string{}
 		}
@@ -124,12 +118,11 @@ func ValidoParametros() bool {
 	return traeParametro
 }
 
-// ===== Función de headers CORS =====
 func corsHeaders() map[string]string {
 	return map[string]string{
-		"Access-Control-Allow-Origin":  "http://localhost:3000", // origen exacto
-		"Access-Control-Allow-Headers": "Content-Type,Authorization",
-		"Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+		"Access-Control-Allow-Origin":      "http://localhost:3000",
+		"Access-Control-Allow-Headers":     "Content-Type,Authorization",
+		"Access-Control-Allow-Methods":     "GET,POST,PUT,DELETE,OPTIONS",
 		"Access-Control-Allow-Credentials": "true",
 	}
 }
