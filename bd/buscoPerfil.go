@@ -2,17 +2,18 @@ package bd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/puricalvo/twitterGo/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-
 )
 
 func BuscoPerfil(ID string) (models.Usuario, error) {
 	ctx := context.TODO()
 	db := MongoCN.Database(DatabaseName)
 	col := db.Collection("usuarios")
+	fmt.Println("ID recibido en BD:", ID)
 
 	var perfil models.Usuario
 	objID, _ := primitive.ObjectIDFromHex(ID)
@@ -28,3 +29,4 @@ func BuscoPerfil(ID string) (models.Usuario, error) {
 	}
 	return perfil, nil
 }
+

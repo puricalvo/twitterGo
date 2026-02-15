@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/puricalvo/twitterGo/models"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -67,8 +69,13 @@ func BuscoPerfilConContext(ctx context.Context, ID string) (models.Usuario, erro
 
 	collection := MongoCN.Database(DatabaseName).Collection("usuarios")
 
-	// Usamos el contexto pasado desde VerPerfil con timeout
-	err := collection.FindOne(ctx, map[string]interface{}{"_id": ID}).Decode(&usuario)
+	// 🔹 Convertir ID a ObjectID
+	objID, err := primitive.ObjectIDFromHex(ID)
+	if err != nil {
+		return usuario, fmt.Errorf("ID inválido: %s", ID)
+	}
+
+	err = collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&usuario)
 	if err != nil {
 		return usuario, err
 	}

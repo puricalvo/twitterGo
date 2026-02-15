@@ -13,7 +13,6 @@ import (
 	"github.com/puricalvo/twitterGo/awsgo"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
-
 )
 
 // Avatar por defecto en base64 (importado o generado)
@@ -25,9 +24,11 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
 	r.Status = 400
 
 	ID := request.QueryStringParameters["id"]
+	fmt.Println("ID recibido en router:", ID)
 	if len(ID) < 1 {
 		r.Message = "El parámetro ID es obligatorio"
 		return r
+		
 	}
 
 	perfil, err := bd.BuscoPerfil(ID)
