@@ -9,7 +9,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
-
+	"go.mongodb.org/mongo-driver/mongo" // 👈 AÑADIR ESTE IMPORT
 )
 
 func VerPerfil(request events.APIGatewayProxyRequest) models.RespApi {
@@ -17,20 +17,25 @@ func VerPerfil(request events.APIGatewayProxyRequest) models.RespApi {
 	r.Status = 400
 
 	fmt.Println("Entré en VerPerfil")
+
 	ID := request.QueryStringParameters["id"]
 	if len(ID) < 1 {
 		r.Message = "El parámetro ID es obligatorio"
 		return r
 	}
 
-	// 🔹 Creamos un contexto con timeout por request
+	fmt.Println("Buscando perfil con ID:", ID)
+
 	ctxTimeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	perfil, err := bd.BuscoPerfilConContext(ctxTimeout, ID)
 	if err != nil {
-		// Diferenciar si no hay documentos vs error real
-		if err.Error() == "mongo: no documents in result" {
+
+		fmt.Println("Error BuscoPerfil:", err)
+
+		// ✅ Forma correcta de detectar usuario no encontrado
+		if err == mongo.ErrNoDocuments {
 			r.Status = 404
 			r.Message = "Usuario no encontrado"
 		} else {
