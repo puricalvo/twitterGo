@@ -44,7 +44,7 @@ func VerPerfil(request events.APIGatewayProxyRequest) models.RespApi {
 		}
 		return r
 	}
-	fmt.Printf("Perfil obtenido: %+v\n", perfil)
+	
 	respJson, err := json.Marshal(perfil)
 	if err != nil {
 		r.Status = 500
