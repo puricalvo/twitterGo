@@ -19,19 +19,24 @@ func ListaUsuarios(request events.APIGatewayProxyRequest, claim models.Claim) mo
 	IDUsuario := claim.ID.Hex()
 
 	if len(page) == 0 {
-		page="1"
+		page = "1"
 	}
 
 	pagTemp, err := strconv.Atoi(page)
 	if err != nil {
-		r.Message = "Debe enviar el parámetro 'page' como entero mayor a 0 "+err.Error()
+		r.Message = "Debe enviar el parámetro 'page' como entero mayor a 0 " + err.Error()
 		return r
 	}
 
 	usuarios, status := bd.LeoUsuariosTodos(IDUsuario, int64(pagTemp), search, typeUser)
 	if !status {
-		r.Message = "Error al leer los usuarios"
-		return r
+		// 🔹 Si hay error en bd, devolvemos array vacío en vez de romper
+		usuarios = []*models.Usuario{}
+	}
+
+	// 🔹 Siempre devolvemos un array JSON
+	if usuarios == nil {
+		usuarios = []*models.Usuario{}
 	}
 
 	respJson, err := json.Marshal(usuarios)
@@ -44,5 +49,4 @@ func ListaUsuarios(request events.APIGatewayProxyRequest, claim models.Claim) mo
 	r.Status = 200
 	r.Message = string(respJson)
 	return r
-
 }
