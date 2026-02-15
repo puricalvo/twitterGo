@@ -69,10 +69,10 @@ func BuscoPerfilConContext(ctx context.Context, ID string) (models.Usuario, erro
 
 	collection := MongoCN.Database(DatabaseName).Collection("usuarios")
 
-	// 🔹 Convertir ID a ObjectID
+	// 🔹 Convertir string a ObjectID
 	objID, err := primitive.ObjectIDFromHex(ID)
 	if err != nil {
-		return usuario, fmt.Errorf("ID inválido: %s", ID)
+		return usuario, err
 	}
 
 	err = collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&usuario)
@@ -80,5 +80,6 @@ func BuscoPerfilConContext(ctx context.Context, ID string) (models.Usuario, erro
 		return usuario, err
 	}
 
+	usuario.Password = ""
 	return usuario, nil
 }
