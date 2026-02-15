@@ -1,12 +1,15 @@
 package routers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
+
 )
 
 func VerPerfil(request events.APIGatewayProxyRequest) models.RespApi {
@@ -20,7 +23,11 @@ func VerPerfil(request events.APIGatewayProxyRequest) models.RespApi {
 		return r
 	}
 
-	perfil, err := bd.BuscoPerfil(ID)
+	// 🔹 Creamos un contexto con timeout por request
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	perfil, err := bd.BuscoPerfilConContext(ctxTimeout, ID)
 	if err != nil {
 		// Diferenciar si no hay documentos vs error real
 		if err.Error() == "mongo: no documents in result" {
