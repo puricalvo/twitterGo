@@ -26,7 +26,7 @@ func VerPerfil(request events.APIGatewayProxyRequest) models.RespApi {
 
 	fmt.Println("Buscando perfil con ID:", ID)
 
-	ctxTimeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	perfil, err := bd.BuscoPerfilConContext(ctxTimeout, ID)
