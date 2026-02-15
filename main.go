@@ -127,8 +127,9 @@ func ValidoParametros() bool {
 // ===== Función de headers CORS =====
 func corsHeaders() map[string]string {
 	return map[string]string{
-		"Access-Control-Allow-Origin":      "*",
-    	"Access-Control-Allow-Headers":     "Content-Type,Authorization",
-    	"Access-Control-Allow-Methods":     "GET,POST,PUT,DELETE,OPTIONS",
+		"Access-Control-Allow-Origin":  "http://localhost:3000", // origen exacto
+		"Access-Control-Allow-Headers": "Content-Type,Authorization",
+		"Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+		"Access-Control-Allow-Credentials": "true",
 	}
 }

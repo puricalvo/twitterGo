@@ -13,6 +13,7 @@ import (
 	"github.com/puricalvo/twitterGo/awsgo"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
+
 )
 
 // Avatar por defecto en base64 (importado o generado)
@@ -49,9 +50,10 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
 	r.CustomResp = &events.APIGatewayProxyResponse{
 		StatusCode: 404,
 		Headers: map[string]string{
-			"Access-Control-Allow-Origin":      "*",
-			"Access-Control-Allow-Headers":     "Content-Type,Authorization",
-			"Access-Control-Allow-Methods":     "GET,POST,PUT,DELETE,OPTIONS",
+			"Access-Control-Allow-Origin":  "http://localhost:3000", // origen exacto
+			"Access-Control-Allow-Headers": "Content-Type,Authorization",
+			"Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+			"Access-Control-Allow-Credentials": "true",
 		},
 	}
 	return r
