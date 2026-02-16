@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
-
 )
 
 func LeoTweets(request events.APIGatewayProxyRequest) models.RespApi {
@@ -17,10 +16,10 @@ func LeoTweets(request events.APIGatewayProxyRequest) models.RespApi {
 	ID := request.QueryStringParameters["id"]
 	pagina := request.QueryStringParameters["pagina"]
 
-	if len(ID) < 1 {
+	 if len(ID) < 1 {
 		r.Message = "El parámetro ID es obligatorio"
 		return r
-	}
+	} 
 
 	if len(pagina) < 1 {
 		pagina = "1"
