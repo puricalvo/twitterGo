@@ -26,7 +26,7 @@ func LeoTweetsSeguidores(request events.APIGatewayProxyRequest, claim models.Cla
 		return r
 	}
 
-	tweets, correcto := bd.LeoTweetsSeguidores(IDUsuario, int64(pag))
+	tweets, correcto := bd.LeoTweetsSeguidores(IDUsuario, pag)
 	if !correcto {
 		r.Message = "Error al leer los Tweets"
 		return r

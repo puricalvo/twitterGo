@@ -16,10 +16,10 @@ func LeoTweets(request events.APIGatewayProxyRequest) models.RespApi {
 	ID := request.QueryStringParameters["id"]
 	pagina := request.QueryStringParameters["pagina"]
 
-	 if len(ID) < 1 {
+	if len(ID) < 1 {
 		r.Message = "El parámetro ID es obligatorio"
 		return r
-	} 
+	}
 
 	if len(pagina) < 1 {
 		pagina = "1"
@@ -31,7 +31,7 @@ func LeoTweets(request events.APIGatewayProxyRequest) models.RespApi {
 		return r
 	}
 
-	tweets, correcto := bd.LeoTweets(ID, pag )
+	tweets, correcto := bd.LeoTweets(ID, int64(pag))
 	if !correcto {
 		r.Message = "Error al leer los Tweets"
 		return r

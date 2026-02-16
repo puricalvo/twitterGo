@@ -5,40 +5,38 @@ import (
 
 	"github.com/puricalvo/twitterGo/models"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func LeoTweets(ID string, pagina int) ([]models.DevuelvoTweetsSeguidores, bool) {
+func LeoTweets(ID string, pagina int64) ([]*models.DevuelvoTweets, bool) {
 	ctx := context.TODO()
 
 	db := MongoCN.Database(DatabaseName)
-	col := db.Collection("relacion")
+	col := db.Collection("tweet")
 
-	skip := (pagina - 1) * 20
+	var resultados []*models.DevuelvoTweets
 
-	condiciones := make([]bson.M, 0)
-	condiciones = append(condiciones, bson.M{"$match": bson.M{"usuarioid": ID}})
-	condiciones = append(condiciones, bson.M{
-		"$lookup": bson.M{
-			"from": "tweet",
-			"localField": "usuariorelacionid",
-			"foreignField": "userid",
-			"as": "tweet",
-		}})
-	condiciones = append(condiciones, bson.M{"$unwind": "$tweet"})
-	condiciones = append(condiciones, bson.M{"$sort": bson.M{"tweet.fecha": -1}})
-	condiciones = append(condiciones, bson.M{"$skip": skip})
-	condiciones = append(condiciones, bson.M{"$limit": 20})
-
-	var result []models.DevuelvoTweetsSeguidores
-
-	cursor, err := col.Aggregate(ctx, condiciones)
-	if err != nil {
-		return result, false
+	condicion := bson.M{
+		"userid": ID,
 	}
 
-	err = cursor.All(ctx, &result)
+	opciones := options.Find()
+	opciones.SetLimit(20)
+	opciones.SetSort(bson.D{{Key: "fecha", Value: -1}})
+	opciones.SetSkip((pagina - 1) * 20)
+
+	cursor, err := col.Find(ctx, condicion, opciones)
 	if err != nil {
-		return result, false
+		return resultados, false
 	}
-	return result, true
+
+	for cursor.Next(ctx) {
+		var registro models.DevuelvoTweets
+		err := cursor.Decode(&registro)
+		if err != nil {
+			return resultados, false
+		}
+		resultados = append(resultados, &registro)
+	}
+	return resultados, true
 }
