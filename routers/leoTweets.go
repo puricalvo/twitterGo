@@ -5,24 +5,16 @@ import (
 	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/puricalvo/twitterGo/models"
 	"github.com/puricalvo/twitterGo/bd"
-
+	"github.com/puricalvo/twitterGo/models"
 )
 
-
-func LeoTweets(request events.APIGatewayProxyRequest) models.RespApi {
+func LeoTweets( request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
 	var r models.RespApi
-	r.Status = 400
+	r.Status=400
+	IDUsuario := claim.ID.Hex()
 
-	ID := request.QueryStringParameters["id"]
 	pagina := request.QueryStringParameters["pagina"]
-
-	if len(ID) < 1 {
-		r.Message = "El parámetro ID es obligatorio"
-		return r
-	}
-
 	if len(pagina) < 1 {
 		pagina = "1"
 	}
@@ -33,7 +25,7 @@ func LeoTweets(request events.APIGatewayProxyRequest) models.RespApi {
 		return r
 	}
 
-	tweets, correcto := bd.LeoTweets(ID, int64(pag))
+	tweets, correcto := bd.LeoTweetsSeguidores(IDUsuario, int64(pag))
 	if !correcto {
 		r.Message = "Error al leer los Tweets"
 		return r
@@ -42,10 +34,13 @@ func LeoTweets(request events.APIGatewayProxyRequest) models.RespApi {
 	respJson, err := json.Marshal(tweets)
 	if err != nil {
 		r.Status = 500
-		r.Message = "Error al formatear los datos de los usuarios como JSON"
-		return r
+		r.Message = "Error al formatear los datos de tweets de los seguidores"
 	}
-	r.Status = 200
-	r.Message = string(respJson)
+
+	r.Status =200
+	r.Message= string(respJson)
 	return r
+
+
+
 }
