@@ -3,6 +3,7 @@ package routers
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 
@@ -50,12 +51,12 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
 	}
 
 	r.CustomResp = &events.APIGatewayProxyResponse{
-		StatusCode: 200,
-		Body:       file.String(),
+		StatusCode:      200,
+		Body:            base64.StdEncoding.EncodeToString(file.Bytes()), // ✅ base64
 		Headers: map[string]string{
-			"Content-Type":        "application/octet-stream",
-			"Content-Disposition": fmt.Sprintf("attachment; filename=\"%s\"", filename),
+			"Content-Type": "image/jpeg", // ✅ reflejar S3
 		},
+		IsBase64Encoded: true, // ✅ muy importante
 	}
 	return r
 }

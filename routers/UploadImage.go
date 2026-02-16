@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
 )
@@ -88,9 +89,11 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 				client := s3.NewFromConfig(cfg)
 				uploader := manager.NewUploader(client)
 				_, err = uploader.Upload(ctx, &s3.PutObjectInput{
-					Bucket: bucket,
-					Key:    aws.String(filename),
-					Body:   &readSeeker{buf},
+					Bucket:      bucket,
+					Key:         aws.String(filename),
+					Body:        buf,
+					ContentType: aws.String("image/jpeg"),  // muy importante
+					ACL:         types.ObjectCannedACLPublicRead, // permite que todos la lean
 				})
 
 				if err != nil {
