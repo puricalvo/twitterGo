@@ -7,7 +7,6 @@ import (
 	"io"
 	"mime"
 	"mime/multipart"
-	"net/http"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -17,8 +16,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
-
 )
+
+type readSeeker struct {
+	io.Reader
+}
+
+func (rs *readSeeker) Seek(offset int64, whence int) (int64, error) {
+	return 0, nil
+}
 
 func UploadImage(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
 
@@ -29,164 +35,85 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 	var filename string
 	var usuario models.Usuario
 
-	bucket := ctx.Value(models.Key("bucketName")).(string)
-
+	bucket := aws.String(ctx.Value(models.Key("bucketName")).(string))
 	switch uploadType {
 	case "A":
-		filename = "avatars/" + IDUsuario
+		filename = "avatars/" + IDUsuario + ".jpg"
 		usuario.Avatar = filename
 	case "B":
-		filename = "banners/" + IDUsuario
+		filename = "banners/" + IDUsuario + ".jpg"
 		usuario.Banner = filename
 	}
 
-	// ==========================
-	// OBTENER CONTENT-TYPE SEGURO
-	// ==========================
-
-	contentType := request.Headers["Content-Type"]
-
-	if contentType == "" {
-		contentType = request.Headers["content-type"]
-	}
-
-	if contentType == "" && request.MultiValueHeaders != nil {
-		if values, ok := request.MultiValueHeaders["Content-Type"]; ok && len(values) > 0 {
-			contentType = values[0]
-		}
-	}
-
-	if contentType == "" && request.MultiValueHeaders != nil {
-		if values, ok := request.MultiValueHeaders["content-type"]; ok && len(values) > 0 {
-			contentType = values[0]
-		}
-	}
-
-	if contentType == "" {
-		r.Status = 400
-		r.Message = "Content-Type no recibido"
-		return r
-	}
-
-	mediaType, params, err := mime.ParseMediaType(contentType)
+	mediaType, params, err := mime.ParseMediaType(request.Headers["Content-Type"])
 	if err != nil {
 		r.Status = 500
-		r.Message = "Error parseando Content-Type: " + err.Error()
+		r.Message = err.Error()
 		return r
 	}
 
-	if !strings.HasPrefix(mediaType, "multipart/") {
-		r.Status = 400
-		r.Message = "Debe enviar una imagen con Content-Type multipart/"
-		return r
-	}
+	if strings.HasPrefix(mediaType, "multipart/") {
 
-	// ==========================
-	// DECODIFICAR BODY
-	// ==========================
-
-	var body []byte
-
-	if request.IsBase64Encoded {
-		decoded, err := base64.StdEncoding.DecodeString(request.Body)
+		body, err := base64.StdEncoding.DecodeString(request.Body)
 		if err != nil {
 			r.Status = 500
-			r.Message = "Error decodificando base64: " + err.Error()
+			r.Message = err.Error()
 			return r
 		}
-		body = decoded
-	} else {
-		body = []byte(request.Body)
-	}
 
-	// ==========================
-	// LEER MULTIPART
-	// ==========================
-
-	boundary, ok := params["boundary"]
-	if !ok {
-		r.Status = 400
-		r.Message = "Boundary no encontrado en Content-Type"
-		return r
-	}
-
-	mr := multipart.NewReader(bytes.NewReader(body), boundary)
-
-	var fileUploaded bool
-
-	for {
+		mr := multipart.NewReader(bytes.NewReader(body), params["boundary"])
 		p, err := mr.NextPart()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
+		if err != nil && err != io.EOF {
 			r.Status = 500
 			r.Message = err.Error()
 			return r
 		}
 
-		if p.FileName() == "" {
-			continue
+		if err != io.EOF {
+			if p.FileName() != "" {
+				buf := bytes.NewBuffer(nil)
+				if _, err := io.Copy(buf, p); err != nil {
+					r.Status = 500
+					r.Message = err.Error()
+					return r
+				}
+
+				cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-east-1"))
+				if err != nil {
+					r.Status = 500
+					r.Message = err.Error()
+					return r
+				}
+
+				client := s3.NewFromConfig(cfg)
+				uploader := manager.NewUploader(client)
+				_, err = uploader.Upload(ctx, &s3.PutObjectInput{
+					Bucket: bucket,
+					Key:    aws.String(filename),
+					Body:   &readSeeker{buf},
+				})
+
+				if err != nil {
+					r.Status = 500
+					r.Message = err.Error()
+					return r
+				}
+			}
 		}
 
-		buf := bytes.NewBuffer(nil)
-		if _, err := io.Copy(buf, p); err != nil {
-			r.Status = 500
-			r.Message = err.Error()
+		status, err := bd.ModificoRegistro(usuario, IDUsuario)
+		if err != nil || !status {
+			r.Status = 400
+			r.Message = "Error al modificar registro del usuario " + err.Error()
 			return r
 		}
-
-		fileBytes := buf.Bytes()
-
-		// Detectar tipo MIME automáticamente
-		detectedContentType := http.DetectContentType(fileBytes)
-
-		cfg, err := config.LoadDefaultConfig(ctx)
-		if err != nil {
-			r.Status = 500
-			r.Message = "Error al cargar configuración de AWS: " + err.Error()
-			return r
-		}
-
-		client := s3.NewFromConfig(cfg)
-		uploader := manager.NewUploader(client)
-
-		_, err = uploader.Upload(ctx, &s3.PutObjectInput{
-			Bucket:       aws.String(bucket),
-			Key:          aws.String(filename),
-			Body:         bytes.NewReader(fileBytes),
-			ContentType:  aws.String(detectedContentType),
-			CacheControl: aws.String("no-cache"),
-		})
-
-		if err != nil {
-			r.Status = 500
-			r.Message = err.Error()
-			return r
-		}
-
-		fileUploaded = true
-		break
-	}
-
-	if !fileUploaded {
+	} else {
+		r.Message = "Debe enviar una imagen con el 'Content-Type' de tipo 'multipart/' en el Header"
 		r.Status = 400
-		r.Message = "No se encontró archivo en el form-data"
-		return r
-	}
-
-	// ==========================
-	// ACTUALIZAR BASE DE DATOS
-	// ==========================
-
-	status, err := bd.ModificoRegistro(usuario, IDUsuario)
-	if err != nil || !status {
-		r.Status = 400
-		r.Message = "Error actualizando base de datos"
 		return r
 	}
 
 	r.Status = 200
-	r.Message = "Image Upload OK!"
+	r.Message = "Image Upload OK !"
 	return r
 }
