@@ -13,7 +13,6 @@ func BuscoPerfil(ID string) (models.Usuario, error) {
 	ctx := context.TODO()
 	db := MongoCN.Database(DatabaseName)
 	col := db.Collection("usuarios")
-	fmt.Println("ID recibido en BD:", ID)
 
 	var perfil models.Usuario
 	objID, _ := primitive.ObjectIDFromHex(ID)
@@ -23,10 +22,11 @@ func BuscoPerfil(ID string) (models.Usuario, error) {
 	}
 
 	err := col.FindOne(ctx, condicion).Decode(&perfil)
-	perfil.Password=""
+	perfil.Password = ""
 	if err != nil {
-		return  perfil, err
+		return perfil, err
 	}
+
 	return perfil, nil
 }
 

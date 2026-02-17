@@ -1,18 +1,45 @@
 package routers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
-	"go.mongodb.org/mongo-driver/mongo" // 👈 AÑADIR ESTE IMPORT
+	// 👈 AÑADIR ESTE IMPORT
 )
 
 func VerPerfil(request events.APIGatewayProxyRequest) models.RespApi {
+	var r models.RespApi
+	r.Status = 400
+
+	fmt.Println("Entré en VerPerfil")
+	ID := request.QueryStringParameters["id"]
+	if len(ID) < 1 {
+		r.Message = "El parámetro ID es obligatorio"
+		return r
+	}
+
+	perfil, err := bd.BuscoPerfil(ID)
+	if err != nil {
+		r.Message = "Ocurrió un error al intentar buscar el registro " + err.Error()
+		return r
+	}
+
+	respJson, err := json.Marshal(perfil)
+	if err != nil {
+		r.Status = 500
+		r.Message = "Error al formatear los datos de los usuario como JSON " + err.Error()
+		return r
+	}
+
+	r.Status = 200
+	r.Message = string(respJson)
+	return r
+}
+
+/* func VerPerfil(request events.APIGatewayProxyRequest) models.RespApi {
 	var r models.RespApi
 	r.Status = 400
 
@@ -56,3 +83,4 @@ func VerPerfil(request events.APIGatewayProxyRequest) models.RespApi {
 	r.Message = string(respJson)
 	return r
 }
+ */
