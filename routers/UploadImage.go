@@ -39,12 +39,12 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 	}
 
 	// Obtener el tipo de media de la cabecera Content-Type
-	mediaType, params, err := mime.ParseMediaType(request.Headers["Content-Type"])
-	if err != nil {
-		r.Status = 500
-		r.Message = err.Error()
-		return r
-	}
+	contentType := request.Headers["content-type"]
+		if contentType == "" {
+			contentType = request.Headers["Content-Type"]
+		}
+
+		mediaType, params, err := mime.ParseMediaType(contentType)
 
 	// Si el tipo de media es multipart, seguimos con el procesamiento
 	if strings.HasPrefix(mediaType, "multipart/") {
