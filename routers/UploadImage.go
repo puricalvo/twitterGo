@@ -12,20 +12,10 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
 )
-
-type readSeeker struct {
-	io.Reader
-}
-
-func (rs *readSeeker) Seek(offset int64, whence int) (int64, error) {
-	return 0, nil
-}
 
 func UploadImage(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
 
@@ -37,6 +27,7 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 	var usuario models.Usuario
 
 	bucket := aws.String(ctx.Value(models.Key("bucketName")).(string))
+
 	switch uploadType {
 	case "A":
 		filename = "avatars/" + IDUsuario + ".jpg"
@@ -55,11 +46,17 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 
 	if strings.HasPrefix(mediaType, "multipart/") {
 
-		body, err := base64.StdEncoding.DecodeString(request.Body)
-		if err != nil {
-			r.Status = 500
-			r.Message = err.Error()
-			return r
+		// Manejar si API Gateway manda base64 o no
+		var body []byte
+		if request.IsBase64Encoded {
+			body, err = base64.StdEncoding.DecodeString(request.Body)
+			if err != nil {
+				r.Status = 500
+				r.Message = err.Error()
+				return r
+			}
+		} else {
+			body = []byte(request.Body)
 		}
 
 		mr := multipart.NewReader(bytes.NewReader(body), params["boundary"])
@@ -72,11 +69,18 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 
 		if err != io.EOF {
 			if p.FileName() != "" {
+
 				buf := bytes.NewBuffer(nil)
 				if _, err := io.Copy(buf, p); err != nil {
 					r.Status = 500
 					r.Message = err.Error()
 					return r
+				}
+
+				// Obtener Content-Type real del archivo
+				contentType := p.Header.Get("Content-Type")
+				if contentType == "" {
+					contentType = "application/octet-stream"
 				}
 
 				cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-east-1"))
@@ -87,13 +91,12 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 				}
 
 				client := s3.NewFromConfig(cfg)
-				uploader := manager.NewUploader(client)
-				_, err = uploader.Upload(ctx, &s3.PutObjectInput{
+
+				_, err = client.PutObject(ctx, &s3.PutObjectInput{
 					Bucket:      bucket,
 					Key:         aws.String(filename),
 					Body:        buf,
-					ContentType: aws.String("image/jpeg"),  // muy importante
-					ACL:         types.ObjectCannedACLPublicRead, // permite que todos la lean
+					ContentType: aws.String(contentType),
 				})
 
 				if err != nil {
@@ -110,8 +113,9 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 			r.Message = "Error al modificar registro del usuario " + err.Error()
 			return r
 		}
+
 	} else {
-		r.Message = "Debe enviar una imagen con el 'Content-Type' de tipo 'multipart/' en el Header"
+		r.Message = "Debe enviar una imagen con el 'Content-Type' multipart en el Header"
 		r.Status = 400
 		return r
 	}

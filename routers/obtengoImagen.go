@@ -50,14 +50,17 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
 		return r
 	}
 
+	encoded := base64.StdEncoding.EncodeToString(file.Bytes())
+
 	r.CustomResp = &events.APIGatewayProxyResponse{
-		StatusCode:      200,
-		Body:            base64.StdEncoding.EncodeToString(file.Bytes()), // ✅ base64
-		Headers: map[string]string{
-			"Content-Type": "image/jpeg", // ✅ reflejar S3
-		},
-		IsBase64Encoded: true, // ✅ muy importante
-	}
+    StatusCode:      200,
+    Body:            encoded,
+    IsBase64Encoded: true,
+    Headers: map[string]string{
+        "Content-Type": "image/jpeg",
+        "Access-Control-Allow-Origin": "*",
+    },
+}
 	return r
 }
 
