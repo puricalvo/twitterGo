@@ -28,6 +28,7 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 
 	bucket := aws.String(ctx.Value(models.Key("bucketName")).(string))
 
+	// Define el tipo de archivo según el tipo de subida (A = Avatar, B = Banner)
 	switch uploadType {
 	case "A":
 		filename = "avatars/" + IDUsuario + ".jpg"
@@ -37,6 +38,7 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 		usuario.Banner = filename
 	}
 
+	// Obtener el tipo de media de la cabecera Content-Type
 	mediaType, params, err := mime.ParseMediaType(request.Headers["Content-Type"])
 	if err != nil {
 		r.Status = 500
@@ -44,9 +46,10 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 		return r
 	}
 
+	// Si el tipo de media es multipart, seguimos con el procesamiento
 	if strings.HasPrefix(mediaType, "multipart/") {
 
-		// Manejar si API Gateway manda base64 o no
+		// Manejo si la solicitud está codificada en base64
 		var body []byte
 		if request.IsBase64Encoded {
 			body, err = base64.StdEncoding.DecodeString(request.Body)
@@ -59,6 +62,7 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 			body = []byte(request.Body)
 		}
 
+		// Crear el lector multipart
 		mr := multipart.NewReader(bytes.NewReader(body), params["boundary"])
 		p, err := mr.NextPart()
 		if err != nil && err != io.EOF {
@@ -67,9 +71,11 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 			return r
 		}
 
+		// Si encontramos una parte del archivo
 		if err != io.EOF {
 			if p.FileName() != "" {
 
+				// Creamos un buffer para leer el archivo
 				buf := bytes.NewBuffer(nil)
 				if _, err := io.Copy(buf, p); err != nil {
 					r.Status = 500
@@ -77,12 +83,13 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 					return r
 				}
 
-				// Obtener Content-Type real del archivo
+				// Obtener el tipo de contenido real del archivo
 				contentType := p.Header.Get("Content-Type")
 				if contentType == "" {
-					contentType = "application/octet-stream"
+					contentType = "application/octet-stream" // Si no hay tipo de contenido, usar un valor por defecto
 				}
 
+				// Cargar la configuración de AWS
 				cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-east-1"))
 				if err != nil {
 					r.Status = 500
@@ -90,13 +97,15 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 					return r
 				}
 
+				// Crear el cliente de S3
 				client := s3.NewFromConfig(cfg)
 
+				// Subir el archivo a S3
 				_, err = client.PutObject(ctx, &s3.PutObjectInput{
 					Bucket:      bucket,
 					Key:         aws.String(filename),
 					Body:        buf,
-					ContentType: aws.String(contentType),
+					ContentType: aws.String(contentType), // Usamos el Content-Type correcto
 				})
 
 				if err != nil {
@@ -107,6 +116,7 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 			}
 		}
 
+		// Actualizamos el registro del usuario en la base de datos
 		status, err := bd.ModificoRegistro(usuario, IDUsuario)
 		if err != nil || !status {
 			r.Status = 400
@@ -120,6 +130,7 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 		return r
 	}
 
+	// Si todo ha ido bien, devolvemos un mensaje de éxito
 	r.Status = 200
 	r.Message = "Image Upload OK !"
 	return r
