@@ -7,6 +7,7 @@ import (
 	"github.com/puricalvo/twitterGo/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func BuscoPerfil(ID string) (models.Usuario, error) {
@@ -22,13 +23,20 @@ func BuscoPerfil(ID string) (models.Usuario, error) {
 	}
 
 	err := col.FindOne(ctx, condicion).Decode(&perfil)
-	perfil.Password = ""
 	if err != nil {
+
+		if err == mongo.ErrNoDocuments {
+			// Usuario sin perfil aún
+			return perfil, nil
+		}
+
+		// Error real de Mongo
 		return perfil, err
 	}
 
+	perfil.Password = ""
 	return perfil, nil
-}
+	}
 
 func BuscoPerfilConContext(ctx context.Context, ID string) (models.Usuario, error) {
 	var usuario models.Usuario
