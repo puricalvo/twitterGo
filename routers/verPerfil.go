@@ -4,13 +4,47 @@ import (
 	"encoding/json"
 	"fmt"
 
+	// 👈 AÑADIR ESTE IMPORT
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
-	// 👈 AÑADIR ESTE IMPORT
 )
 
 func VerPerfil(request events.APIGatewayProxyRequest) models.RespApi {
+	var r models.RespApi
+	r.Status = 400
+
+	fmt.Println("Entré en VerPerfil")
+
+	ID := request.QueryStringParameters["id"]
+	if len(ID) < 1 {
+		r.Message = "El parámetro ID es obligatorio"
+		return r
+	}
+
+	perfil, err := bd.BuscoPerfil(ID)
+	if err != nil {
+		// Solo error real de DB
+		r.Status = 500
+		r.Message = "Error al buscar perfil: " + err.Error()
+		return r
+	}
+
+	respJson, err := json.Marshal(perfil)
+	if err != nil {
+		r.Status = 500
+		r.Message = "Error al formatear perfil a JSON: " + err.Error()
+		return r
+	}
+
+	r.Status = 200
+	r.Message = string(respJson)
+	return r
+}
+
+
+/* func VerPerfil(request events.APIGatewayProxyRequest) models.RespApi {
 	var r models.RespApi
 	r.Status = 400
 
@@ -37,7 +71,7 @@ func VerPerfil(request events.APIGatewayProxyRequest) models.RespApi {
 	r.Status = 200
 	r.Message = string(respJson)
 	return r
-}
+} */
 
 /* func VerPerfil(request events.APIGatewayProxyRequest) models.RespApi {
 	var r models.RespApi
