@@ -34,6 +34,7 @@ func LeoUsuariosTodos(ID string, page int64, search string, tipo string) ([]*mod
 	if err != nil {
 		return results, false
 	}
+	defer cur.Close(ctx)
 
 	var incluir bool
 
