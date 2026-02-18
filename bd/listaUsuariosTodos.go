@@ -20,11 +20,17 @@ func LeoUsuariosTodos(ID string, page int64, search string, tipo string) ([]*mod
 	opciones.SetLimit(20)
 	opciones.SetSkip((page - 1) * 20)
 
-	query := bson.M{
-		"nombre": bson.M{"$regex": `(?i)` + search},
+	query := bson.M{}
+
+	if search != "" {
+		query["nombre"] = bson.M{
+			"$regex": search,
+			"$options": "i",
+		}
 	}
 
 	cur, err := col.Find(ctx, query, opciones)
+
 	if err != nil {
 		return results, false
 	}
