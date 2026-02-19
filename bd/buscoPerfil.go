@@ -2,44 +2,40 @@ package bd
 
 import (
 	"context"
-	"time"
 
 	"github.com/puricalvo/twitterGo/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func BuscoPerfil(ID string) (models.Usuario, error) {
-    ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-    defer cancel()
-    
-    db := MongoCN.Database(DatabaseName)
-    col := db.Collection("usuarios")
+	ctx := context.TODO()
+	db := MongoCN.Database(DatabaseName)
+	col := db.Collection("usuarios")
 
-    var perfil models.Usuario
-    
-    // 1. VALIDACIÓN DEL HEX: No ignores el error con "_"
-    objID, err := primitive.ObjectIDFromHex(ID)
-    if err != nil {
-        // Si el ID no es válido, devolvemos el error inmediatamente
-        // Esto evita que la función siga y explote
-        return perfil, err 
-    }
+	var perfil models.Usuario
+	objID, _ := primitive.ObjectIDFromHex(ID)
 
-    condicion := bson.M{
-        "_id": objID,
-    }
+	condicion := bson.M{
+		"_id": objID,
+	}
 
-    err = col.FindOne(ctx, condicion).Decode(&perfil)
-    
-    // 2. Manejo de resultados
-    if err != nil {
-        return perfil, err // Aquí devolvemos el error (incluido ErrNoDocuments)
-    }
+	err := col.FindOne(ctx, condicion).Decode(&perfil)
+	if err != nil {
 
-    perfil.Password = ""
-    return perfil, nil
-}
+		if err == mongo.ErrNoDocuments {
+			// Usuario sin perfil aún
+			return perfil, nil
+		}
+
+		// Error real de Mongo
+		return perfil, err
+	}
+
+	perfil.Password = ""
+	return perfil, nil
+	}
 
 /* func BuscoPerfilConContext(ctx context.Context, ID string) (models.Usuario, error) {
 	var usuario models.Usuario
