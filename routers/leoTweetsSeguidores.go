@@ -13,7 +13,7 @@ import (
 func LeoTweetsSeguidores(request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
 	var r models.RespApi
 	r.Status = 400
-	IDUsuario := claim.ID.Hex()
+	//IDUsuario := claim.ID.Hex()
 
 	pagina := request.QueryStringParameters["pagina"]
 	if len(pagina) < 1 {
@@ -26,7 +26,7 @@ func LeoTweetsSeguidores(request events.APIGatewayProxyRequest, claim models.Cla
 		return r
 	}
 
-	tweets, correcto := bd.LeoTweetsSeguidores(IDUsuario, pag)
+	tweets, correcto := bd.LeoTweetsSeguidores( pag)
 	if !correcto {
 		r.Message = "Error al leer los Tweets"
 		return r

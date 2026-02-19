@@ -7,7 +7,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func LeoTweetsSeguidores(ID string, pagina int) ([]models.DevuelvoTweetsSeguidores, bool) {
+//ID string,
+func LeoTweetsSeguidores( pagina int) ([]models.DevuelvoTweetsSeguidores, bool) {
 	ctx := context.TODO()
 
 	db := MongoCN.Database(DatabaseName)
@@ -16,7 +17,7 @@ func LeoTweetsSeguidores(ID string, pagina int) ([]models.DevuelvoTweetsSeguidor
 	skip := (pagina - 1) * 20
 
 	condiciones := make([]bson.M, 0)
-	condiciones = append(condiciones, bson.M{"$match": bson.M{"usuarioid": ID}})
+	//condiciones = append(condiciones, bson.M{"$match": bson.M{"usuarioid": ID}})
 	condiciones = append(condiciones, bson.M{
 		"$lookup": bson.M{
 			"from":         "tweet",
