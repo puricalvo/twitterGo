@@ -2,7 +2,6 @@ package bd
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/puricalvo/twitterGo/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -38,7 +37,7 @@ func BuscoPerfil(ID string) (models.Usuario, error) {
 	return perfil, nil
 	}
 
-func BuscoPerfilConContext(ctx context.Context, ID string) (models.Usuario, error) {
+/* func BuscoPerfilConContext(ctx context.Context, ID string) (models.Usuario, error) {
 	var usuario models.Usuario
 
 	if MongoCN == nil {
@@ -61,5 +60,5 @@ func BuscoPerfilConContext(ctx context.Context, ID string) (models.Usuario, erro
 	usuario.Password = ""
 	return usuario, nil
 }
-
+ */
 
