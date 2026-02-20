@@ -37,28 +37,5 @@ func BuscoPerfil(ID string) (models.Usuario, error) {
 	return perfil, nil
 	}
 
-/* func BuscoPerfilConContext(ctx context.Context, ID string) (models.Usuario, error) {
-	var usuario models.Usuario
 
-	if MongoCN == nil {
-		return usuario, fmt.Errorf("Mongo no conectado")
-	}
-
-	collection := MongoCN.Database(DatabaseName).Collection("usuarios")
-
-	// 🔹 Convertir string a ObjectID
-	objID, err := primitive.ObjectIDFromHex(ID)
-	if err != nil {
-		return usuario, err
-	}
-
-	err = collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&usuario)
-	if err != nil {
-		return usuario, err
-	}
-
-	usuario.Password = ""
-	return usuario, nil
-}
- */
 
