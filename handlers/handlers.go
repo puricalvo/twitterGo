@@ -51,6 +51,9 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 
 		case "subirBanner":
 			return routers.UploadImage(ctx, "B", request, claim)
+			
+		case "tweetImage":
+			return routers.UploadImage(ctx, "T", request, claim)
 		}
 		//
 	case "GET":

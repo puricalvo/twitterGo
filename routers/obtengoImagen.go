@@ -13,55 +13,73 @@ import (
 	"github.com/puricalvo/twitterGo/awsgo"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
+
 )
 
 func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
+    var r models.RespApi
+    r.Status = 400
 
-	var r models.RespApi
-	r.Status = 400
+    var filename string
 
-	ID := request.QueryStringParameters["id"]
-	if len(ID) < 1 {
-		r.Message = "El parámetro ID es obligatorio"
-		return r
-	}
+    // --- NUEVA LÓGICA AQUÍ ---
+    switch uploadType {
+    case "A", "B": // AVATAR O BANNER
+        ID := request.QueryStringParameters["id"]
+        if len(ID) < 1 {
+            r.Message = "El parámetro ID es obligatorio"
+            return r
+        }
+        perfil, err := bd.BuscoPerfil(ID)
+        if err != nil {
+            r.Message = "Usuario no encontrado " + err.Error()
+            return r
+        }
+        if uploadType == "A" {
+            filename = perfil.Avatar
+        } else {
+            filename = perfil.Banner
+        }
 
-	perfil, err := bd.BuscoPerfil(ID)
-	if err != nil {
-		r.Message = "Usuario no encontrado " + err.Error()
-		return r
-	}
+    case "T": // TWEET
+        // En los tweets NO buscamos perfil, usamos el nombre que viene en la URL
+        nombre := request.QueryStringParameters["nombre"]
+        if len(nombre) < 1 {
+            r.Message = "El parámetro nombre es obligatorio"
+            return r
+        }
+        filename = nombre // El nombre ya traerá "tweetImage/..." si lo guardaste así
+    }
+    // -------------------------
 
-	var filename string
-	switch uploadType {
-	case "A":
-		filename = perfil.Avatar
-	case "B":
-		filename = perfil.Banner
-	}
+    if len(filename) < 1 {
+        r.Message = "Imagen no encontrada"
+        return r
+    }
 
-	fmt.Println("Filename " + filename)
-	svc := s3.NewFromConfig(awsgo.Cfg)
+    fmt.Println("Descargando Filename: " + filename)
+    svc := s3.NewFromConfig(awsgo.Cfg)
 
-	file, err := downloadFromS3(ctx, svc, filename)
-	if err != nil {
-		r.Status = 500
-		r.Message = "Error descargando archivo de S3 " + err.Error()
-		return r
-	}
+    file, err := downloadFromS3(ctx, svc, filename)
+    if err != nil {
+        r.Status = 500
+        r.Message = "Error descargando archivo de S3 " + err.Error()
+        return r
+    }
 
-	encoded := base64.StdEncoding.EncodeToString(file.Bytes())
+    encoded := base64.StdEncoding.EncodeToString(file.Bytes())
 
-	r.CustomResp = &events.APIGatewayProxyResponse{
-    StatusCode:      200,
-    Body:            encoded,
-    IsBase64Encoded: true,
-    Headers: map[string]string{
-        "Content-Type": "image/jpeg",
-        "Access-Control-Allow-Origin": "*",
-    },
-}
-	return r
+    r.CustomResp = &events.APIGatewayProxyResponse{
+        StatusCode:      200,
+        Body:            encoded,
+        IsBase64Encoded: true,
+        Headers: map[string]string{
+            "Content-Type":                "image/jpeg",
+            "Access-Control-Allow-Origin": "*",
+        },
+    }
+    r.Status = 200
+    return r
 }
 
 func downloadFromS3(ctx context.Context, svc *s3.Client, filename string) (*bytes.Buffer, error) {

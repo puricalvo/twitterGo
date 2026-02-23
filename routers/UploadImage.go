@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"mime"
 	"mime/multipart"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -36,7 +38,10 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 	case "B":
 		filename = "banners/" + IDUsuario + ".jpg"
 		usuario.Banner = filename
-	}
+	
+	case "T": // <--- Te faltaba esta línea
+        filename = "tweetImage/" + IDUsuario + "_" + time.Now().Format("20060102150405")
+    }
 
 	// Obtener el tipo de media de la cabecera Content-Type
 	contentType := request.Headers["content-type"]
@@ -122,7 +127,11 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 			r.Status = 400
 			r.Message = "Error al modificar registro del usuario " + err.Error()
 			return r
-		}
+		} else {
+    // Si es tipo "T" (Tweet), no llamamos a ModificoRegistro.
+    // Simplemente hemos subido el archivo a S3 y ya está.
+    fmt.Println("Imagen de tweet subida correctamente a S3, saltando actualización de perfil.")
+}
 
 	} else {
 		r.Message = "Debe enviar una imagen con el 'Content-Type' multipart en el Header"
@@ -132,6 +141,6 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 
 	// Si todo ha ido bien, devolvemos un mensaje de éxito
 	r.Status = 200
-	r.Message = "Image Upload OK !"
+	r.Message = filename
 	return r
 }
