@@ -13,6 +13,7 @@ import (
 	"github.com/puricalvo/twitterGo/awsgo"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
+
 )
 
 func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
@@ -21,12 +22,8 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
 
     var filename string
 
-    //tipo := request.QueryStringParameters["type"]
-    nombre := request.QueryStringParameters["nombre"]
-
-    // --- NUEVA LÓGICA AQUÍ ---
     switch uploadType {
-    case "A", "B": // AVATAR O BANNER
+    case "A", "B":
         ID := request.QueryStringParameters["id"]
         if len(ID) < 1 {
             r.Message = "El parámetro ID es obligatorio"
@@ -44,18 +41,14 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
         }
 
     case "T":
-    if len(nombre) < 1 {
-        r.Message = "El parámetro nombre es obligatorio"
-        return r
-    }
-    filename = nombre
-    default:
-        // Por si acaso, si no es A, B o T, pero viene un nombre, intentamos usarlo
-        if len(nombre) > 0 {
-            filename = nombre
+        // Usamos directamente el parámetro "nombre" que viene en la URL de Postman
+        nombre := request.QueryStringParameters["nombre"]
+        if len(nombre) < 1 {
+            r.Message = "El parámetro nombre es obligatorio"
+            return r
         }
+        filename = nombre 
     }
-    // -------------------------
 
     if len(filename) < 1 {
         r.Message = "Imagen no encontrada"
@@ -72,6 +65,7 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
         return r
     }
 
+    // Convertimos a Base64 para que API Gateway lo entienda
     encoded := base64.StdEncoding.EncodeToString(file.Bytes())
 
     r.CustomResp = &events.APIGatewayProxyResponse{
@@ -86,7 +80,6 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
     r.Status = 200
     return r
 }
-
 func downloadFromS3(ctx context.Context, svc *s3.Client, filename string) (*bytes.Buffer, error) {
 	bucket := ctx.Value(models.Key("bucketName")).(string)
 	obj, err := svc.GetObject(ctx, &s3.GetObjectInput{
