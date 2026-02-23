@@ -26,6 +26,7 @@ func GraboTweet(ctx context.Context, claim models.Claim) models.RespApi {
 		UserID: IDUsuario,
 		Mensaje: mensaje.Mensaje,
 		Fecha: time.Now(),
+		Imagen:  mensaje.Imagen,
 	}
 
 	_, status, err := bd.InsertoTweet(registro)
