@@ -18,6 +18,7 @@ func InsertoTweet(t models.GraboTweet) (string, bool, error) {
 		"userid": t.UserID,
 		"mensaje": t.Mensaje,
 		"fecha": t.Fecha,
+		"imagen": t.Imagen,
 	}
 
 	result, err := col.InsertOne(ctx, registro)
