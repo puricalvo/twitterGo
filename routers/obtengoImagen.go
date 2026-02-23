@@ -13,7 +13,6 @@ import (
 	"github.com/puricalvo/twitterGo/awsgo"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
-
 )
 
 func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
@@ -21,6 +20,9 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
     r.Status = 400
 
     var filename string
+
+    //tipo := request.QueryStringParameters["type"]
+    nombre := request.QueryStringParameters["nombre"]
 
     // --- NUEVA LÓGICA AQUÍ ---
     switch uploadType {
@@ -41,14 +43,17 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
             filename = perfil.Banner
         }
 
-    case "T": // TWEET
-        // En los tweets NO buscamos perfil, usamos el nombre que viene en la URL
-        nombre := request.QueryStringParameters["nombre"]
-        if len(nombre) < 1 {
-            r.Message = "El parámetro nombre es obligatorio"
-            return r
+    case "T":
+    if len(nombre) < 1 {
+        r.Message = "El parámetro nombre es obligatorio"
+        return r
+    }
+    filename = nombre
+    default:
+        // Por si acaso, si no es A, B o T, pero viene un nombre, intentamos usarlo
+        if len(nombre) > 0 {
+            filename = nombre
         }
-        filename = nombre // El nombre ya traerá "tweetImage/..." si lo guardaste así
     }
     // -------------------------
 
