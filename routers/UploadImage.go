@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
+
 )
 
 func UploadImage(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
@@ -41,6 +42,7 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 	case "T":
 		// Añadimos .jpg al final para que el archivo sea válido
 		filename = "tweetImage/" + IDUsuario + "_" + time.Now().Format("20060102150405") + ".jpg"
+		usuario.Imagen = filename
 	}
 
 	contentType := request.Headers["content-type"]
