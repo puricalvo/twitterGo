@@ -44,7 +44,7 @@ func ObtenerImagenTweet(ctx context.Context, request events.APIGatewayProxyReque
         Body:            encoded,
         IsBase64Encoded: true,
         Headers: map[string]string{
-            "Content-Type":                "image/jpeg",
+            "Content-Type":                "imagen/*",
             "Access-Control-Allow-Origin": "*",
         },
     }
