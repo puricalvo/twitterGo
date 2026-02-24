@@ -34,23 +34,22 @@ func ObtenerImagenTweet(ctx context.Context, request events.APIGatewayProxyReque
   }
 
   data := file.Bytes()
+    mime := http.DetectContentType(data)
 
-  // Detectar MIME real desde los bytes
-  mime := http.DetectContentType(data) // "image/png", "image/jpeg", etc.
+    // normaliza por si acaso
+    if mime == "image/jpg" {
+    mime = "image/jpeg"
+    }
 
-  // API Gateway necesita el body en base64 string + flag true para entregarlo binario
-  bodyB64 := base64.StdEncoding.EncodeToString(data)
-
-  r.CustomResp = &events.APIGatewayProxyResponse{
+    r.CustomResp = &events.APIGatewayProxyResponse{
     StatusCode:      200,
-    Body:            bodyB64,
+    Body:            base64.StdEncoding.EncodeToString(data),
     IsBase64Encoded: true,
     Headers: map[string]string{
-      "Content-Type":                mime,
-      "Access-Control-Allow-Origin": "*",
-      "Cache-Control":               "public, max-age=31536000",
+        "Content-Type":                mime, // "image/png" o "image/jpeg" o "image/webp"
+        "Access-Control-Allow-Origin": "*",
     },
-  }
+}
 
   r.Status = 200
   return r
