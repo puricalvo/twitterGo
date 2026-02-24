@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime"
 	"mime/multipart"
+	"net/http"
 	"strings"
 	"time"
 
@@ -82,10 +83,19 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 					return r
 				}
 
-				fileContentType := p.Header.Get("content-Type")
-				if fileContentType == "" {
-					fileContentType = "application/octet-stream"
-				}
+				// --- CAMBIO AQUÍ ---
+                fileContentType := p.Header.Get("Content-Type")
+                
+                // Si viene vacío o es el tipo genérico, intentamos detectarlo por el contenido
+                if fileContentType == "" || fileContentType == "application/octet-stream" {
+                    // Usamos el buffer para detectar el tipo real (jpeg, png, etc)
+                    fileContentType = http.DetectContentType(buf.Bytes())
+                }
+
+                // Si es un Tweet ("T"), nos aseguramos de que S3 sepa que es una imagen
+                if uploadType == "T" && (fileContentType == "application/octet-stream" || fileContentType == "text/plain; charset=utf-8") {
+                    fileContentType = "image/jpeg"
+                }
 
 				cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-east-1"))
 				if err != nil {
