@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -12,6 +13,50 @@ import (
 )
 
 func ObtenerImagenTweet(ctx context.Context, request events.APIGatewayProxyRequest) models.RespApi {
+  var r models.RespApi
+  r.Status = 400
+
+  nombre := request.QueryStringParameters["nombre"]
+  if len(nombre) < 1 {
+    r.Message = "El parámetro nombre es obligatorio"
+    return r
+  }
+
+  fmt.Println("Buscando imagen de Tweet: " + nombre)
+
+  svc := s3.NewFromConfig(awsgo.Cfg)
+
+  file, err := downloadFromS3(ctx, svc, nombre) // asumo file.Bytes() => []byte
+  if err != nil {
+    r.Status = 500
+    r.Message = "La imagen no existe en S3: " + err.Error()
+    return r
+  }
+
+  data := file.Bytes()
+
+  // Detectar MIME real desde los bytes
+  mime := http.DetectContentType(data) // "image/png", "image/jpeg", etc.
+
+  // API Gateway necesita el body en base64 string + flag true para entregarlo binario
+  bodyB64 := base64.StdEncoding.EncodeToString(data)
+
+  r.CustomResp = &events.APIGatewayProxyResponse{
+    StatusCode:      200,
+    Body:            bodyB64,
+    IsBase64Encoded: true,
+    Headers: map[string]string{
+      "Content-Type":                mime,
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control":               "public, max-age=31536000",
+    },
+  }
+
+  r.Status = 200
+  return r
+}
+
+/* func ObtenerImagenTweet(ctx context.Context, request events.APIGatewayProxyRequest) models.RespApi {
     var r models.RespApi
     r.Status = 400
 
@@ -44,10 +89,10 @@ func ObtenerImagenTweet(ctx context.Context, request events.APIGatewayProxyReque
         Body:            encoded,
         IsBase64Encoded: true,
         Headers: map[string]string{
-            "Content-Type":                "imagen/*",
+            "Content-Type":                "image/*",
             "Access-Control-Allow-Origin": "*",
         },
     }
     r.Status = 200
     return r
-}
+} */
