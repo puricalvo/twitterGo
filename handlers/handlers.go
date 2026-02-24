@@ -71,7 +71,7 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 			return routers.ObtenerImagen(ctx, "B", request, claim)
 
 		case "obtenerImageTweets":
-			return routers.ObtenerImagen(ctx, "T", request, claim)
+			return routers.ObtenerImagenTweet(ctx, request)
 
 		case "consultaRelacion":
 			return routers.ConsultaRelacion(request, claim)
@@ -108,8 +108,8 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 
 func validoAuthorization(ctx context.Context, request events.APIGatewayProxyRequest) (bool, int, string, models.Claim) {
 	path := ctx.Value(models.Key("path")).(string)
-	if path == "registro" || path == "login" || path == "obtenerAvatar" || path == "obtenerBanner"  {
-		fmt.Println("PATH RECIBIDO:", path)
+	if path == "registro" || path == "login" || path == "obtenerAvatar" || path == "obtenerBanner" || path == "obtenerImageTweets" {
+		fmt.Println("PATH RECIBIDO (Público):", path)
 		return  true, 200, "", models.Claim{}
 	}
 
