@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-
 )
 
 type Usuario struct {
@@ -19,5 +18,4 @@ type Usuario struct {
 	Biografia 		string 				`bson:"biografia" json:"biografia,omitempty"`
 	Ubicacion 		string 				`bson:"ubicacion" json:"ubicacion,omitempty"`
 	SitioWeb 		string 				`bson:"sitioweb" json:"sitioweb,omitempty"`
-	Imagen  		string    					`bson:"imagen" json:"imagen,omitempty"`
 }
