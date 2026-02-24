@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"mime"
 	"mime/multipart"
+	"net/http"
 	"strings"
 	"time"
 
@@ -16,9 +18,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
+
 )
 
-func UploadImage(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
+/* func UploadImage(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
 
 	var r models.RespApi
 	r.Status = 400
@@ -72,21 +75,21 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 					r.Message = err.Error()
 					return r
 				}
-	
+
 				cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-east-1"))
 				if err != nil {
 					r.Status = 500
 					r.Message = err.Error()
 					return r
 				}
-	
+
 				client := s3.NewFromConfig(cfg)
 				_, err = client.PutObject(ctx, &s3.PutObjectInput{
 					Bucket: bucket,
 					Key:    aws.String(filename),
 					Body:   buf,
 				})
-	
+
 				if err != nil {
 					r.Status = 500
 					r.Message = err.Error()
@@ -110,11 +113,11 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 	r.Status = 200
 	r.Message = "Image Upload OK !"
 	return r
-}
+} */
 
 
 
-/* func UploadImage(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
+ func UploadImage(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
 
 	var r models.RespApi
 	r.Status = 400
@@ -236,5 +239,21 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 	// 3. Respuesta de éxito: El nombre del archivo va en r.Message
 	r.Status = 200
 	r.Message = filename
-	return r
-} */
+
+	r.Status = 200
+    r.Message = filename // Aquí guardamos el nombre (ej: tweetImage/xxx.jpg)
+
+    // ¡ESTO ES LO QUE FALTA! 
+    // Tenemos que serializar "r" en el Body para que React lo vea
+    r.CustomResp = &events.APIGatewayProxyResponse{
+        StatusCode: 200,
+        Body:       `{"status": 200, "message": "` + filename + `"}`, 
+        Headers: map[string]string{
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+        },
+    }
+
+    return r
+}
+	

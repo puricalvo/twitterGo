@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -13,7 +14,6 @@ import (
 	"github.com/puricalvo/twitterGo/awsgo"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
-
 )
 
 func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
@@ -41,13 +41,22 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
         }
 
     case "T":
-        // Usamos directamente el parámetro "nombre" que viene en la URL de Postman
+        // 1. Obtenemos el nombre del parámetro
         nombre := request.QueryStringParameters["nombre"]
         if len(nombre) < 1 {
             r.Message = "El parámetro nombre es obligatorio"
             return r
         }
-        filename = nombre 
+
+        // 2. IMPORTANTE: 
+        // Si el nombre que viene de la base de datos ya incluye "tweetImage/", 
+        // filename será igual a nombre.
+        // Si NO lo incluye, hay que añadírselo.
+        if !strings.HasPrefix(nombre, "tweetImage/") {
+            filename = "tweetImage/" + nombre
+        } else {
+            filename = nombre
+        }
     }
 
     if len(filename) < 1 {
@@ -80,6 +89,7 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
     r.Status = 200
     return r
 }
+
 func downloadFromS3(ctx context.Context, svc *s3.Client, filename string) (*bytes.Buffer, error) {
 	bucket := ctx.Value(models.Key("bucketName")).(string)
 	obj, err := svc.GetObject(ctx, &s3.GetObjectInput{
