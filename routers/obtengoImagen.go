@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -41,24 +40,6 @@ func ObtenerImagen(ctx context.Context, uploadType string, request events.APIGat
 		filename = perfil.Avatar
 	case "B":
 		filename = perfil.Banner
-    case "T":
-        // 1. Obtenemos el nombre del parámetro
-        nombre := request.QueryStringParameters["nombre"]
-        if len(nombre) < 1 {
-            r.Message = "El parámetro nombre es obligatorio"
-            return r
-        }
-
-        // 2. IMPORTANTE: 
-        // Si el nombre que viene de la base de datos ya incluye "tweetImage/", 
-        // filename será igual a nombre.
-        // Si NO lo incluye, hay que añadírselo.
-        if !strings.HasPrefix(nombre, "tweetImage/") {
-            filename = "tweetImage/" + nombre
-        } else {
-            filename = nombre
-        }
-    
 	}
 
 	fmt.Println("Filename " + filename)
