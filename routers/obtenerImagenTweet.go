@@ -4,7 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -12,12 +13,28 @@ import (
 	"github.com/puricalvo/twitterGo/models"
 )
 
+func mimeFromKey(key string) string {
+  ext := strings.ToLower(filepath.Ext(key))
+  switch ext {
+  case ".jpg", ".jpeg":
+    return "image/jpeg"
+  case ".png":
+    return "image/png"
+  case ".webp":
+    return "image/webp"
+  case ".gif":
+    return "image/gif"
+  default:
+    return "application/octet-stream"
+  }
+}
+
 func ObtenerImagenTweet(ctx context.Context, request events.APIGatewayProxyRequest) models.RespApi {
   var r models.RespApi
   r.Status = 400
 
   nombre := request.QueryStringParameters["nombre"]
-  if len(nombre) < 1 {
+  if nombre == "" {
     r.Message = "El parámetro nombre es obligatorio"
     return r
   }
@@ -26,7 +43,7 @@ func ObtenerImagenTweet(ctx context.Context, request events.APIGatewayProxyReque
 
   svc := s3.NewFromConfig(awsgo.Cfg)
 
-  file, err := downloadFromS3(ctx, svc, nombre) // asumo file.Bytes() => []byte
+  file, err := downloadFromS3(ctx, svc, nombre)
   if err != nil {
     r.Status = 500
     r.Message = "La imagen no existe en S3: " + err.Error()
@@ -34,22 +51,17 @@ func ObtenerImagenTweet(ctx context.Context, request events.APIGatewayProxyReque
   }
 
   data := file.Bytes()
-    mime := http.DetectContentType(data)
+  mime := mimeFromKey(nombre)
 
-    // normaliza por si acaso
-    if mime == "image/jpg" {
-    mime = "image/jpeg"
-    }
-
-    r.CustomResp = &events.APIGatewayProxyResponse{
+  r.CustomResp = &events.APIGatewayProxyResponse{
     StatusCode:      200,
     Body:            base64.StdEncoding.EncodeToString(data),
     IsBase64Encoded: true,
     Headers: map[string]string{
-        "Content-Type":                mime, // "image/png" o "image/jpeg" o "image/webp"
-        "Access-Control-Allow-Origin": "*",
+      "Content-Type":                mime, // <-- aquí estaba tu problema
+      "Access-Control-Allow-Origin": "*",
     },
-}
+  }
 
   r.Status = 200
   return r
