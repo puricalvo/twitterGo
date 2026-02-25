@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"path/filepath"
-	"strings"
+	//"path/filepath"
+	//"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/puricalvo/twitterGo/awsgo"
 	"github.com/puricalvo/twitterGo/models"
+
 )
 
-func mimeFromKey(key string) string {
+/* func mimeFromKey(key string) string {
   ext := strings.ToLower(filepath.Ext(key))
   switch ext {
   case ".jpg", ".jpeg":
@@ -27,7 +28,7 @@ func mimeFromKey(key string) string {
   default:
     return "application/octet-stream"
   }
-}
+} */
 
 
 
