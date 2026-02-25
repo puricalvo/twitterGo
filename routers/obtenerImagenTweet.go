@@ -69,6 +69,7 @@ func ObtenerImagenTweet(ctx context.Context, request events.APIGatewayProxyReque
   }
 
   r.Status = 200
+  r.Message = "Imagen OK!!!!"
   return r
 }
 
