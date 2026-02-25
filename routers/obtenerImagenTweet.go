@@ -29,6 +29,9 @@ func mimeFromKey(key string) string {
   }
 }
 
+
+
+
 func ObtenerImagenTweet(ctx context.Context, request events.APIGatewayProxyRequest) models.RespApi {
   var r models.RespApi
   r.Status = 400
@@ -51,14 +54,14 @@ func ObtenerImagenTweet(ctx context.Context, request events.APIGatewayProxyReque
   }
 
   data := file.Bytes()
-  mime := mimeFromKey(nombre)
+  //mime := mimeFromKey(nombre)
 
   r.CustomResp = &events.APIGatewayProxyResponse{
     StatusCode:      200,
     Body:            base64.StdEncoding.EncodeToString(data),
     IsBase64Encoded: true,
     Headers: map[string]string{
-      "Content-Type":                mime, // <-- aquí estaba tu problema
+      "Content-Type":                "image/jpeg", // <-- aquí estaba tu problema
       "Access-Control-Allow-Origin": "*",
     },
   }
