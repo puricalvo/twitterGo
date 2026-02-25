@@ -53,12 +53,14 @@ func ObtenerImagenTweet(ctx context.Context, request events.APIGatewayProxyReque
     return r
   }
 
-  data := file.Bytes()
+  encoded := base64.StdEncoding.EncodeToString(file.Bytes())
+  //data := file.Bytes()
+
   //mime := mimeFromKey(nombre)
 
   r.CustomResp = &events.APIGatewayProxyResponse{
     StatusCode:      200,
-    Body:            base64.StdEncoding.EncodeToString(data),
+    Body:         encoded,   //base64.StdEncoding.EncodeToString(data),
     IsBase64Encoded: true,
     Headers: map[string]string{
       "Content-Type":                "image/jpeg", // <-- aquí estaba tu problema
