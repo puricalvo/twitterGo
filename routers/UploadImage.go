@@ -134,7 +134,12 @@ func UploadImage(ctx context.Context, uploadType string, request events.APIGatew
 
 	// Si todo ha ido bien, devolvemos un mensaje de éxito
 	r.Status = 200
-	r.Message = "Image Upload OK !"
+	// POR ESTO:
+	if uploadType == "T" {
+		r.Message = filename // filename contiene "tweetImage/697af..."
+	} else {
+		r.Message = "Image Upload OK !"
+	}
 	return r
 }
 
