@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/jwt"
 	"github.com/puricalvo/twitterGo/models"
@@ -20,7 +19,7 @@ func Login(ctx context.Context) models.RespApi {
 	body := ctx.Value(models.Key("body")).(string)
 	err := json.Unmarshal([]byte(body), &t)
 	if err != nil {
-		r.Message="Usuario y/o Contraseña Inválidos "+err.Error()
+		r.Message = "Usuario y/o Contraseña Inválidos " + err.Error()
 		return r
 	}
 	if len(t.Email) == 0 {
@@ -35,8 +34,8 @@ func Login(ctx context.Context) models.RespApi {
 
 	jwtKey, err := jwt.GeneroJWT(ctx, userData)
 	if err != nil {
-		r.Message = "Ocurrió un error al intentar generar el token correspondiente > "+err.Error()
-		return  r
+		r.Message = "Ocurrió un error al intentar generar el token correspondiente > " + err.Error()
+		return r
 	}
 
 	resp := models.RespuestaLogin{
@@ -45,31 +44,27 @@ func Login(ctx context.Context) models.RespApi {
 
 	token, err2 := json.Marshal(resp)
 	if err2 != nil {
-		r.Message = "Ocurrió un error al intentar formatear el token a JSON > "+err2.Error()
-		return  r
+		r.Message = "Ocurrió un error al intentar formatear el token a JSON > " + err2.Error()
+		return r
 	}
 
 	cookie := &http.Cookie{
-		Name: "token",
-		Value: jwtKey,
+		Name:    "token",
+		Value:   jwtKey,
 		Expires: time.Now().Add(24 * time.Hour),
 	}
 	cookieString := cookie.String()
 
-	res := &events.APIGatewayProxyResponse{
+	res := &models.APIResponse{
 		StatusCode: 200,
-		Body: string(token),
-		Headers: map[string]string {
-			"Access-Control-Allow-Origin":      "*",
-			"Access-Control-Allow-Headers":     "Content-Type,Authorization",
-			"Access-Control-Allow-Methods":     "GET,POST,PUT,DELETE,OPTIONS",
-			"Access-Control-Allow-Credentials": "true",
+		Body:       string(token),
+		Headers: map[string]string{
 			"Set-Cookie": cookieString,
 		},
 	}
 
-	r.Status=200
-	r.Message=string(token)
+	r.Status = 200
+	r.Message = string(token)
 	r.CustomResp = res
 
 	return r

@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/puricalvo/twitterGo/jwt"
 	"github.com/puricalvo/twitterGo/models"
 	"github.com/puricalvo/twitterGo/routers"
 )
 
-func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) models.RespApi {
-	fmt.Println("Voy a procesar "+ctx.Value(models.Key("path")).(string) + " > "+ ctx.Value(models.Key("method")).(string))
+func Manejadores(ctx context.Context, request models.APIRequest) models.RespApi {
+	fmt.Println("Voy a procesar " + ctx.Value(models.Key("path")).(string) + " > " + ctx.Value(models.Key("method")).(string))
 
 	var r models.RespApi
 	r.Status = 400
@@ -25,18 +24,14 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 	}
 
 	// 🔹 AQUÍ MISMO
-	path := strings.ReplaceAll(
-		ctx.Value(models.Key("path")).(string),
-		"/",
-		"",
-	)
+	path := strings.Trim(ctx.Value(models.Key("path")).(string), "/")
 
 	switch ctx.Value(models.Key("method")).(string) {
 	case "POST":
 		switch path {
 		case "registro":
 			return routers.Registro(ctx)
-		
+
 		case "login":
 			return routers.Login(ctx)
 
@@ -47,13 +42,13 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 			return routers.AltaRelacion(ctx, request, claim)
 
 		case "subirAvatar":
-			return routers.UploadImage(ctx, "A", request, claim)
+			return routers.UploadImage("A", request, claim)
 
 		case "subirBanner":
-			return routers.UploadImage(ctx, "B", request, claim)
-			
+			return routers.UploadImage("B", request, claim)
+
 		case "tweetImage":
-			return routers.UploadImage(ctx, "T", request, claim)
+			return routers.UploadImage("T", request, claim)
 		}
 		//
 	case "GET":
@@ -65,13 +60,13 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 			return routers.LeoTweets(request)
 
 		case "obtenerAvatar":
-			return routers.ObtenerImagen(ctx, "A", request, claim)
+			return routers.ObtenerImagen("A", request)
 
 		case "obtenerBanner":
-			return routers.ObtenerImagen(ctx, "B", request, claim)
+			return routers.ObtenerImagen("B", request)
 
 		case "obtenerImageTweets":
-			return routers.ObtenerImagenTweet(ctx, request)
+			return routers.ObtenerImagenTweet(request)
 
 		case "consultaRelacion":
 			return routers.ConsultaRelacion(request, claim)
@@ -80,7 +75,7 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 			return routers.ListaUsuarios(request, claim)
 
 		case "leoTweetsSeguidores":
-			return routers.LeoTweetsSeguidores(request, claim)	
+			return routers.LeoTweetsSeguidores(request, claim)
 		}
 		//
 	case "PUT":
@@ -88,7 +83,7 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 		case "modificarPerfil":
 			return routers.ModificarPerfil(ctx, claim)
 		}
-		
+
 		//
 	case "DELETE":
 		switch path {
@@ -96,21 +91,21 @@ func Manejadores(ctx context.Context, request events.APIGatewayProxyRequest) mod
 			return routers.EliminarTweet(request, claim)
 
 		case "bajaRelacion":
-			return routers.BajaRelacion(request, claim)	
+			return routers.BajaRelacion(request, claim)
 		}
 		//
 	}
 
-	r.Message="Method Invalid"
+	r.Message = "Method Invalid"
 	return r
 
 }
 
-func validoAuthorization(ctx context.Context, request events.APIGatewayProxyRequest) (bool, int, string, models.Claim) {
-	path := ctx.Value(models.Key("path")).(string)
+func validoAuthorization(ctx context.Context, request models.APIRequest) (bool, int, string, models.Claim) {
+	path := strings.Trim(ctx.Value(models.Key("path")).(string), "/")
 	if path == "registro" || path == "login" || path == "obtenerAvatar" || path == "obtenerBanner" || path == "obtenerImageTweets" {
 		fmt.Println("PATH RECIBIDO (Público):", path)
-		return  true, 200, "", models.Claim{}
+		return true, 200, "", models.Claim{}
 	}
 
 	token := request.Headers["Authorization"]
@@ -121,15 +116,15 @@ func validoAuthorization(ctx context.Context, request events.APIGatewayProxyRequ
 	claim, todoOk, msg, err := jwt.ProcesoToken(token, ctx.Value(models.Key("jwtSign")).(string))
 	if !todoOk {
 		if err != nil {
-			fmt.Println("Error en el token "+err.Error())
+			fmt.Println("Error en el token " + err.Error())
 			return false, 401, err.Error(), models.Claim{}
 		} else {
 			fmt.Println("Error en el token " + msg)
-			return  false, 401, msg, models.Claim{}
+			return false, 401, msg, models.Claim{}
 		}
 	}
 
 	fmt.Println("Token OK")
-	return  true, 200, msg, *claim
+	return true, 200, msg, *claim
 
 }

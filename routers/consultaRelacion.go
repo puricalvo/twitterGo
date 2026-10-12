@@ -3,18 +3,17 @@ package routers
 import (
 	"encoding/json"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
 )
 
-func ConsultaRelacion(request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
+func ConsultaRelacion(request models.APIRequest, claim models.Claim) models.RespApi {
 	var r models.RespApi
 	r.Status = 400
 
 	ID := request.QueryStringParameters["id"]
 	if len(ID) < 1 {
-		r.Message= "El parámetro de ID es obligatorio"
+		r.Message = "El parámetro de ID es obligatorio"
 		return r
 	}
 
@@ -34,7 +33,7 @@ func ConsultaRelacion(request events.APIGatewayProxyRequest, claim models.Claim)
 	respJson, err := json.Marshal(hayRelacion)
 	if err != nil {
 		r.Status = 500
-		r.Message = "Error al formatear los datos de los usuarios como JSON "+err.Error()
+		r.Message = "Error al formatear los datos de los usuarios como JSON " + err.Error()
 		return r
 	}
 

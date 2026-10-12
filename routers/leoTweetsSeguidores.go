@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
 )
 
-func LeoTweetsSeguidores(request events.APIGatewayProxyRequest, claim models.Claim) models.RespApi {
+func LeoTweetsSeguidores(request models.APIRequest, claim models.Claim) models.RespApi {
 	var r models.RespApi
 	r.Status = 400
 	IDUsuario := claim.ID.Hex()

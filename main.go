@@ -2,124 +2,152 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
 	"os"
 	"strings"
-	"time"
 
-	"github.com/aws/aws-lambda-go/events"
-	lambda "github.com/aws/aws-lambda-go/lambda"
-	"github.com/puricalvo/twitterGo/awsgo"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/handlers"
 	"github.com/puricalvo/twitterGo/models"
-	"github.com/puricalvo/twitterGo/secretmanager"
 )
 
-// 🔥 INIT: se ejecuta UNA sola vez por contenedor
-func init() {
-
-	if !ValidoParametros() {
-		panic("Error en las variables de entorno")
+func main() {
+	mongoURI := os.Getenv("MONGODB_URI")
+	database := os.Getenv("MONGODB_DATABASE")
+	jwtSign := os.Getenv("JWT_SIGN")
+	if mongoURI == "" || database == "" || jwtSign == "" {
+		log.Fatal("MONGODB_URI, MONGODB_DATABASE y JWT_SIGN son obligatorias")
 	}
 
-	awsgo.InicializoAWS()
-
-	SecretModel, err := secretmanager.GetSecret(os.Getenv("SecretName"))
-	if err != nil {
-		panic("Error en la lectura de Secret: " + err.Error())
+	if err := bd.ConectarBD(mongoURI, database); err != nil {
+		log.Fatal("Error conectando con MongoDB: ", err)
 	}
 
-	awsgo.Ctx = context.WithValue(context.Background(), models.Key("user"), SecretModel.Username)
-	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("password"), SecretModel.Password)
-	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("host"), SecretModel.Host)
-	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("database"), SecretModel.Database)
-	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("jwtSign"), SecretModel.JWTSign)
-	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("bucketName"), os.Getenv("BucketName"))
-
-	// 🔥 Conexión BD una sola vez
-	err = bd.ConectarBD(awsgo.Ctx)
-	if err != nil {
-		panic("Error conectando la BD: " + err.Error())
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
 	}
+
+	log.Printf("API escuchando en http://localhost:%s", port)
+	log.Fatal(http.ListenAndServe("127.0.0.1:"+port, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		serveAPI(w, r, jwtSign)
+	})))
 }
 
-func main() {
-	dt := "1970-06-30T00:00:00+00:00"
-	t, err := time.Parse("2006-01-02T15:04:05-07:00", dt)
-	if err != nil {
-		fmt.Println(err)
+func serveAPI(w http.ResponseWriter, r *http.Request, jwtSign string) {
+	setCORSHeaders(w)
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	fmt.Println(t)
 
-	lambda.Start(EjecutoLambda)
+	if strings.HasPrefix(r.URL.Path, "/images/") {
+		serveImage(w, r)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "No se pudo leer la solicitud", http.StatusBadRequest)
+		return
+	}
+
+	query := make(map[string]string)
+	for key, values := range r.URL.Query() {
+		if len(values) > 0 {
+			query[key] = values[0]
+		}
+	}
+
+	headers := make(map[string]string)
+	for key, values := range r.Header {
+		if len(values) > 0 {
+			headers[key] = values[0]
+		}
+	}
+
+	request := models.APIRequest{
+		Headers:               headers,
+		QueryStringParameters: query,
+		Body:                  string(body),
+	}
+	ctx := context.WithValue(r.Context(), models.Key("path"), r.URL.Path)
+	ctx = context.WithValue(ctx, models.Key("method"), r.Method)
+	ctx = context.WithValue(ctx, models.Key("body"), string(body))
+	ctx = context.WithValue(ctx, models.Key("jwtSign"), jwtSign)
+
+	response := handlers.Manejadores(ctx, request)
+	status := response.Status
+	if status == 0 {
+		status = http.StatusInternalServerError
+	}
+
+	if response.CustomResp != nil {
+		for key, value := range response.CustomResp.Headers {
+			w.Header().Set(key, value)
+		}
+		if response.CustomResp.IsBase64Encoded {
+			decoded, err := base64.StdEncoding.DecodeString(response.CustomResp.Body)
+			if err != nil {
+				http.Error(w, "No se pudo decodificar la respuesta", http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(response.CustomResp.StatusCode)
+			if _, err := w.Write(decoded); err != nil {
+				log.Printf("Error escribiendo respuesta: %v", err)
+			}
+			return
+		}
+		if response.CustomResp.StatusCode != 0 {
+			status = response.CustomResp.StatusCode
+		}
+		w.WriteHeader(status)
+		if _, err := fmt.Fprint(w, response.CustomResp.Body); err != nil {
+			log.Printf("Error escribiendo respuesta: %v", err)
+		}
+		return
+	}
+
+	w.WriteHeader(status)
+	if _, err := fmt.Fprint(w, response.Message); err != nil {
+		log.Printf("Error escribiendo respuesta: %v", err)
+	}
 }
 
-func EjecutoLambda(ctx context.Context, request events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
-
-	var res *events.APIGatewayProxyResponse
-
-	// ===== CORS: manejar OPTIONS (preflight) =====
-	if request.HTTPMethod == "OPTIONS" {
-		return &events.APIGatewayProxyResponse{
-			StatusCode: 200,
-			Headers:    corsHeaders(),
-			Body:       "",
-		}, nil
+func serveImage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
 	}
-	// =============================================
-
-	path := strings.ReplaceAll(request.PathParameters["twittergo"], os.Getenv("UrlPrefix"), "", )
-
-	// 🔥 Solo añadimos datos específicos del request
-	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("path"), path)
-	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("method"), request.HTTPMethod)
-	awsgo.Ctx = context.WithValue(awsgo.Ctx, models.Key("body"), request.Body)
-
-	respAPI := handlers.Manejadores(awsgo.Ctx, request)
-
-	if respAPI.CustomResp == nil {
-		res = &events.APIGatewayProxyResponse{
-			StatusCode: respAPI.Status,
-			Body:       respAPI.Message,
-			Headers:    corsHeaders(),
-		}
-		return res, nil
-	} else {
-		if respAPI.CustomResp.Headers == nil {
-			respAPI.CustomResp.Headers = map[string]string{}
-		}
-		for k, v := range corsHeaders() {
-			respAPI.CustomResp.Headers[k] = v
-		}
-		return respAPI.CustomResp, nil
+	filename := strings.TrimPrefix(r.URL.Path, "/images/")
+	if filename == "" || strings.Contains(filename, "..") {
+		http.NotFound(w, r)
+		return
+	}
+	image, contentType, err := bd.LeerImagen(filename)
+	if err != nil {
+		log.Printf("No se pudo recuperar la imagen %q de GridFS: %v", filename, err)
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	if _, err := w.Write(image); err != nil {
+		log.Printf("Error escribiendo imagen: %v", err)
 	}
 }
 
-func ValidoParametros() bool {
-	_, traeParametro := os.LookupEnv("SecretName")
-	if !traeParametro {
-		fmt.Println("Database leido del secret:", bd.MongoCN)
-		return traeParametro
+func setCORSHeaders(w http.ResponseWriter) {
+	origin := os.Getenv("CORS_ORIGIN")
+	if origin == "" {
+		origin = "http://localhost:3000"
 	}
-	_, traeParametro = os.LookupEnv("BucketName")
-	if !traeParametro {
-		return traeParametro
-	}
-	_, traeParametro = os.LookupEnv("UrlPrefix")
-	if !traeParametro {
-		return traeParametro
-	}
-
-	return traeParametro
-}
-
-func corsHeaders() map[string]string {
-	return map[string]string{
-		"Access-Control-Allow-Origin":      "*",
-		"Access-Control-Allow-Headers":     "Content-Type,Authorization",
-		"Access-Control-Allow-Methods":     "GET,POST,PUT,DELETE,OPTIONS",
-		"Access-Control-Allow-Credentials": "true",
-	}
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type,Authorization")
+	w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
 }

@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/puricalvo/twitterGo/bd"
 	"github.com/puricalvo/twitterGo/models"
 )
 
-func LeoTweets(request events.APIGatewayProxyRequest) models.RespApi {
+func LeoTweets(request models.APIRequest) models.RespApi {
 	var r models.RespApi
 	r.Status = 400
 

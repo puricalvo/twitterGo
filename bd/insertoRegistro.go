@@ -13,13 +13,17 @@ func InsertoRegistro(u models.Usuario) (string, bool, error) {
 	db := MongoCN.Database(DatabaseName)
 	col := db.Collection("usuarios")
 
-	u.Password, _ = EncriptarPassword(u.Password)
+	hashedPassword, err := EncriptarPassword(u.Password)
+	if err != nil {
+		return "", false, err
+	}
+	u.Password = hashedPassword
 
 	result, err := col.InsertOne(ctx, u)
 	if err != nil {
-		return  "", false, err
+		return "", false, err
 	}
 
 	ObjID, _ := result.InsertedID.(primitive.ObjectID)
-	return ObjID.String(), true, nil 
+	return ObjID.String(), true, nil
 }
