@@ -137,6 +137,15 @@ func seed() error {
 			return err
 		}
 	}
+	if err := ensureImage(ctx, db, "avatars/demo-account.svg", avatarSVG("#8bb8c8", "#e5bd9b", "#39465d")); err != nil {
+		return err
+	}
+	if err := ensureImage(ctx, db, "banners/demo-account.svg", bannerSVG("#9bd3d0", "#6594b4", "#f0ca97")); err != nil {
+		return err
+	}
+	if err := ensureDemoAccount(ctx, users, seedUser.ID); err != nil {
+		return err
+	}
 
 	tweets := db.Collection("tweet")
 	for _, post := range posts {
@@ -185,6 +194,19 @@ func findUser(ctx context.Context, users *mongo.Collection, email string) (struc
 	}
 	err := users.FindOne(ctx, bson.M{"email": email}).Decode(&user)
 	return user, err
+}
+
+func ensureDemoAccount(ctx context.Context, users *mongo.Collection, id primitive.ObjectID) error {
+	_, err := users.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": bson.M{
+		"nombre":          "Cuenta",
+		"apellidos":       "Demo",
+		"fechaNacimiento": time.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC),
+		"avatar":          "avatars/demo-account.svg",
+		"banner":          "banners/demo-account.svg",
+		"biografia":       "Cuenta de demostración de TwitterGo. Explora los perfiles y publicaciones de ejemplo.",
+		"ubicacion":       "Demo de TwitterGo",
+	}})
+	return err
 }
 
 func ensureProfile(ctx context.Context, users *mongo.Collection, profile demoProfile) (string, error) {
