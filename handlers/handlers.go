@@ -3,6 +3,10 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/puricalvo/twitterGo/jwt"
@@ -25,11 +29,41 @@ func Manejadores(ctx context.Context, request models.APIRequest) models.RespApi 
 
 	// 🔹 AQUÍ MISMO
 	path := strings.Trim(ctx.Value(models.Key("path")).(string), "/")
+	if isWriteRequest(ctx.Value(models.Key("method")).(string), path) {
+		readOnly, err := demoReadOnly()
+		if err != nil {
+			log.Printf("Configuración DEMO_READ_ONLY no válida: %v", err)
+			return models.RespApi{
+				Status:  http.StatusInternalServerError,
+				Message: "Configuración del modo de solo lectura no válida",
+			}
+		}
+		if readOnly {
+			return models.RespApi{
+				Status:  http.StatusForbidden,
+				Message: "La demo está en modo de solo lectura",
+			}
+		}
+	}
 
 	switch ctx.Value(models.Key("method")).(string) {
 	case "POST":
 		switch path {
 		case "registro":
+			enabled, err := registrationEnabled()
+			if err != nil {
+				log.Printf("Configuración ALLOW_REGISTRATION no válida: %v", err)
+				return models.RespApi{
+					Status:  http.StatusInternalServerError,
+					Message: "Configuración del registro no válida",
+				}
+			}
+			if !enabled {
+				return models.RespApi{
+					Status:  http.StatusForbidden,
+					Message: "El registro público está desactivado",
+				}
+			}
 			return routers.Registro(ctx)
 
 		case "login":
@@ -99,6 +133,29 @@ func Manejadores(ctx context.Context, request models.APIRequest) models.RespApi 
 	r.Message = "Method Invalid"
 	return r
 
+}
+
+func registrationEnabled() (bool, error) {
+	value := strings.TrimSpace(os.Getenv("ALLOW_REGISTRATION"))
+	if value == "" {
+		return true, nil
+	}
+	return strconv.ParseBool(value)
+}
+
+func demoReadOnly() (bool, error) {
+	value := strings.TrimSpace(os.Getenv("DEMO_READ_ONLY"))
+	if value == "" {
+		return false, nil
+	}
+	return strconv.ParseBool(value)
+}
+
+func isWriteRequest(method, path string) bool {
+	if method == http.MethodPost {
+		return path != "login"
+	}
+	return method == http.MethodPut || method == http.MethodDelete
 }
 
 func validoAuthorization(ctx context.Context, request models.APIRequest) (bool, int, string, models.Claim) {

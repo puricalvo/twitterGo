@@ -4,6 +4,8 @@ main.exe
 main.zip
 bootstrap
 twittergo-freebsd-amd64
+twittergo-demo-freebsd-amd64
+twittergo-seed-demo-freebsd-amd64
 api.env
 api.log
 api.pid
